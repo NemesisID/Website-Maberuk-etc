@@ -1,6 +1,7 @@
 "use client";
 
-import { type DragEvent, useMemo, useState, useSyncExternalStore } from "react";
+import { type DragEvent, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 
 type AppMode = "super" | "umkm";
 type UmkmView = "dashboard" | "bookkeeping" | "reports" | "profile";
@@ -16,8 +17,8 @@ const umkmNavItems: Array<{ id: UmkmView; label: string; icon: string }> = [
 const superNavItems: Array<{ id: SuperView; label: string; icon: string }> = [
   { id: "dashboard", label: "Dashboard", icon: "DB" },
   { id: "umkm", label: "Kelola UMKM", icon: "UM" },
-  { id: "website", label: "Kelola Website", icon: "WB" },
   { id: "users", label: "Kelola Pengguna", icon: "US" },
+  { id: "website", label: "Kelola Website", icon: "WB" },
 ];
 
 const transactions = [
@@ -187,41 +188,88 @@ const umkmAccounts = [
   },
 ];
 
-const initialRecommendations = [
-  "Toko Sari Rasa",
-  "Batik Sekar Arum",
-  "Hiasan Jati Geometris",
-  "Sambal Korek Bu Tedjo",
+const initialRecommendationsData = [
+  {
+    id: 1,
+    name: "Toko Sari Rasa",
+    category: "Makanan & Minuman",
+    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=300&q=80",
+    owner: "Supriatna",
+    rating: "4.9 ★",
+    status: "Aktif • Rekomendasi Utama",
+  },
+  {
+    id: 2,
+    name: "Batik Sekar Arum",
+    category: "Fashion & Pakaian",
+    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=300&q=80",
+    owner: "Siti Rahma",
+    rating: "4.8 ★",
+    status: "Aktif • Rekomendasi Utama",
+  },
+  {
+    id: 3,
+    name: "Hiasan Jati Geometris",
+    category: "Kerajinan Tangan",
+    image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=300&q=80",
+    owner: "Budi Santoso",
+    rating: "4.7 ★",
+    status: "Aktif • Rekomendasi Unggulan",
+  },
+  {
+    id: 4,
+    name: "Sambal Korek Bu Tedjo",
+    category: "Makanan & Minuman",
+    image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=300&q=80",
+    owner: "Bu Tedjo",
+    rating: "4.9 ★",
+    status: "Aktif • Rekomendasi Unggulan",
+  },
 ];
 
+const defaultHomeData = {
+  heroBadge: "Platform Resmi Warga Kelurahan Babatan",
+  heroTitle: "Platform Digital untuk",
+  heroTitleHighlight: "UMKM Babatan",
+  heroSubtitle: "Dukung dan temukan produk lokal dengan teknologi modern. Bantu usaha warga sekitar berkembang lewat direktori digital yang terstruktur dan sistem pembukuan terpadu.",
+  heroImage: "https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=800&q=80",
+  feature1Title: "Gratis & Mudah Digunakan",
+  feature1Desc: "Tidak ada biaya tersembunyi. Buat profil tokomu dalam 5 menit langsung dari HP-mu.",
+  feature2Title: "Pembukuan Digital",
+  feature2Desc: "Catat Pemasukan dan Pengeluaran harian UMKM-mu tanpa rumit serta pantau keuangan secara otomatis.",
+  feature3Title: "Jangkauan Lebih Luas",
+  feature3Desc: "Produk tokomu dapat diakses oleh ribuan calon pelanggan lokal di area Babatan dan sekitarnya.",
+};
+
+const homepageStoreList = [
+  { id: 1, name: "Toko Sari Rasa", category: "KULINER", image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=500&q=80" },
+  { id: 2, name: "Kerajinan Kayu Babatan", category: "KERAJINAN", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=500&q=80" },
+  { id: 3, name: "Batik Sekar Arum", category: "BATIK & TENUN", image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=500&q=80" },
+  { id: 4, name: "Minuman Segar Babatan", category: "MINUMAN LOKAL", image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=500&q=80" },
+  { id: 5, name: "Warung Sembako Bu Tedjo", category: "WARUNG DAN SEMBAKO", image: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=500&q=80" },
+  { id: 6, name: "Tas Kerajinan Arum", category: "TAS KERAJINAN", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=500&q=80" },
+  { id: 7, name: "Jajanan Pasar Traditional", category: "JAJANAN PASAR", image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=500&q=80" },
+  { id: 8, name: "Salon & Rias Babatan", category: "SALON & RIAS", image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=500&q=80" },
+  { id: 9, name: "Produk Pertanian Organik", category: "PRODUK PERTANIAN", image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=500&q=80" },
+  { id: 10, name: "Servis Elektronik Babatan", category: "SERVIS ELEKTRONIK", image: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=500&q=80" },
+  { id: 11, name: "Tanaman Hias Asri", category: "TANAMAN HIAS", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=500&q=80" },
+  { id: 12, name: "Katering Ramadhan", category: "KATERING RAMADHAN", image: "https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=500&q=80" },
+];
+
+import Link from "next/link";
+
 export default function Home() {
-  const urlMode = useSyncExternalStore(
-    () => () => undefined,
-    getModeFromLocation,
-    () => null,
-  );
-  const [selectedMode, setSelectedMode] = useState<AppMode | null>(null);
-  const mode = selectedMode ?? urlMode;
+  const router = useRouter();
 
-  if (mode === null) {
-    return <div className="min-h-screen bg-[#f6f7f8]" />;
-  }
+  useEffect(() => {
+    router.replace("/admin");
+  }, [router]);
 
-  if (mode === "super") {
-    return <SuperAdminApp setMode={setSelectedMode} />;
-  }
-
-  return <UmkmAdminApp setMode={setSelectedMode} />;
+  return <div className="min-h-screen bg-[#f6f7f8]" />;
 }
 
-function getModeFromLocation() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("mode") === "umkm" ? "umkm" : "super";
-}
-
-/* Mode switch removed — UI now uses sidebar logout and consistent branding */
-
-function SuperAdminApp({ setMode }: { setMode: (mode: AppMode) => void }) {
+export function SuperAdminApp() {
+  const router = useRouter();
   const [activeView, setActiveView] = useState<SuperView>("dashboard");
   const activeLabel = useMemo(
     () => superNavItems.find((item) => item.id === activeView)?.label ?? "Dashboard",
@@ -245,20 +293,14 @@ function SuperAdminApp({ setMode }: { setMode: (mode: AppMode) => void }) {
             </button>
           ))}
         </nav>
-        <div className="mx-6 border-t border-white/10 py-4">
+        <div className="px-6 pb-5 pt-4 border-t border-white/10">
           <button
-            className="super-user-card"
-            onClick={() => setMode("umkm")}
-            title="Lihat Admin UMKM"
+            className="super-logout-button"
+            onClick={() => router.push("/umkm")}
             type="button"
           >
-            <div className="super-avatar">
-              <span>BS</span>
-            </div>
-            <div>
-              <p className="text-left text-xs font-bold leading-tight text-white">Budi Santoso</p>
-              <p className="mt-0.5 text-left text-[10px] leading-tight text-slate-400">budi.admin@babatan.id</p>
-            </div>
+            <LogoutIcon />
+            <span>Keluar</span>
           </button>
         </div>
       </aside>
@@ -318,7 +360,8 @@ function SuperAdminApp({ setMode }: { setMode: (mode: AppMode) => void }) {
   );
 }
 
-function UmkmAdminApp({ setMode }: { setMode: (mode: AppMode) => void }) {
+export function UmkmAdminApp() {
+  const router = useRouter();
   const [activeView, setActiveView] = useState<UmkmView>("dashboard");
   const [isModalOpen, setModalOpen] = useState(false);
   const activeLabel = useMemo(
@@ -329,7 +372,7 @@ function UmkmAdminApp({ setMode }: { setMode: (mode: AppMode) => void }) {
   return (
     <div className="min-h-screen bg-[#f6f7f8] text-slate-950">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[210px] border-r border-slate-200/80 bg-white md:flex md:flex-col">
-        <BrandBlock onSwitchMode={() => setMode("super")} />
+        <BrandBlock onSwitchMode={() => router.push("/admin")} />
         <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
           {umkmNavItems.map((item) => (
             <button
@@ -344,7 +387,11 @@ function UmkmAdminApp({ setMode }: { setMode: (mode: AppMode) => void }) {
           ))}
         </nav>
         <div className="px-4 pb-6">
-          <button className="logout-button" type="button">
+          <button
+            className="logout-button"
+            onClick={() => router.push("/admin")}
+            type="button"
+          >
             <LogoutIcon />
             Keluar
           </button>
@@ -873,6 +920,13 @@ function ManageUmkmView() {
   );
 }
 
+function formatIndonesianDate(dateStr: string) {
+  if (!dateStr) return "Hari ini";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 function AddUmkmModal({
   onClose,
   onAdd,
@@ -886,6 +940,7 @@ function AddUmkmModal({
   const [category, setCategory] = useState("Makanan & Minuman");
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState<"Aktif" | "Nonaktif">("Aktif");
+  const [joinedDate, setJoinedDate] = useState(() => new Date().toISOString().split("T")[0]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -896,7 +951,7 @@ function AddUmkmModal({
       owner,
       phone: phone || "0812-0000-0000",
       status,
-      joined: "Hari ini",
+      joined: formatIndonesianDate(joinedDate),
       category,
       address: address || "Surabaya",
       products: 0,
@@ -969,6 +1024,18 @@ function AddUmkmModal({
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
+              Tanggal Terdaftar / Masuk *
+            </label>
+            <input
+              type="date"
+              className="field font-normal text-slate-800"
+              value={joinedDate}
+              onChange={(e) => setJoinedDate(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Alamat Usaha
             </label>
             <textarea
@@ -1024,7 +1091,7 @@ const sampleUsers = [
     id: 1,
     name: "Herman Adi",
     email: "herman.adi@gmail.com",
-    role: "Admin",
+    role: "UMKM Owner",
     status: "Aktif",
     registered: "01 Nov 2024",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
@@ -1051,7 +1118,7 @@ const sampleUsers = [
     id: 4,
     name: "Lina Marlina",
     email: "linamar@outlook.com",
-    role: "Customer",
+    role: "UMKM Owner",
     status: "Aktif",
     registered: "20 Des 2025",
     avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80",
@@ -1060,7 +1127,7 @@ const sampleUsers = [
     id: 5,
     name: "Doni Prasetya",
     email: "doni.pras@gmail.com",
-    role: "Customer",
+    role: "UMKM Owner",
     status: "Nonaktif",
     registered: "25 Des 2025",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80",
@@ -1078,7 +1145,7 @@ const sampleUsers = [
     id: 7,
     name: "Dewi Lestari",
     email: "dewi.les@gmail.com",
-    role: "Customer",
+    role: "UMKM Owner",
     status: "Aktif",
     registered: "12 Jan 2026",
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80",
@@ -1097,14 +1164,11 @@ const sampleUsers = [
 function ManageUsersView() {
   const [usersList, setUsersList] = useState(sampleUsers);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("Semua");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const filteredUsers = usersList.filter((user) => {
-    const matchesSearch = `${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter === "Semua" || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  const filteredUsers = usersList.filter((user) =>
+    `${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase()),
+  );
 
   function toggleStatus(id: number) {
     setUsersList(
@@ -1128,30 +1192,19 @@ function ManageUsersView() {
     <div className="space-y-5">
       <section className="panel p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 sm:flex-initial">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              <input
-                className="field pl-9 sm:w-64 font-normal text-slate-800"
-                placeholder="Cari nama atau email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+          <div className="relative flex-1 sm:flex-initial">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
             </div>
-            <select
-              className="field w-40 font-normal text-slate-800"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="Semua">Role: Semua</option>
-              <option value="Admin">Admin</option>
-              <option value="UMKM Owner">UMKM Owner</option>
-              <option value="Customer">Customer</option>
-            </select>
+            <input
+              className="field sm:w-64 font-normal text-slate-800"
+              style={{ paddingLeft: "2.25rem" }}
+              placeholder="Cari nama atau email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
           <button
@@ -1162,7 +1215,7 @@ function ManageUsersView() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Tambah Admin Baru
+            Tambah Owner UMKM Baru
           </button>
         </div>
       </section>
@@ -1290,8 +1343,9 @@ function AddUserModal({
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("Admin");
+  const [role] = useState("UMKM Owner");
   const [status, setStatus] = useState("Aktif");
+  const [registeredDate, setRegisteredDate] = useState(() => new Date().toISOString().split("T")[0]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1303,7 +1357,7 @@ function AddUserModal({
       email,
       role,
       status,
-      registered: "Hari ini",
+      registered: formatIndonesianDate(registeredDate),
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
     });
     onClose();
@@ -1313,7 +1367,7 @@ function AddUserModal({
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
       <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900">Tambah Admin / Pengguna Baru</h2>
+          <h2 className="text-base font-bold text-slate-900">Tambah Owner UMKM Baru</h2>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">
             X
           </button>
@@ -1349,15 +1403,11 @@ function AddUserModal({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Peran (Role)
               </label>
-              <select
-                className="field font-normal text-slate-800"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="Admin">Admin</option>
-                <option value="UMKM Owner">UMKM Owner</option>
-                <option value="Customer">Customer</option>
-              </select>
+              <input
+                className="field font-normal text-slate-800 bg-slate-100 cursor-not-allowed"
+                value="UMKM Owner"
+                disabled
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -1373,12 +1423,24 @@ function AddUserModal({
               </select>
             </div>
           </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Tanggal Terdaftar / Masuk *
+            </label>
+            <input
+              type="date"
+              className="field font-normal text-slate-800"
+              value={registeredDate}
+              onChange={(e) => setRegisteredDate(e.target.value)}
+              required
+            />
+          </div>
           <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button className="secondary-button" onClick={onClose} type="button">
               Batal
             </button>
             <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">
-              Simpan Pengguna
+              Simpan Owner UMKM
             </button>
           </div>
         </form>
@@ -1426,10 +1488,174 @@ function EditIcon() {
   );
 }
 
+const initialAboutData = {
+  title: "MABERUK",
+  subtitle: "Maju Bersama UMK Kelurahan Babatan",
+  sectionTitle: "Tentang Maberuk",
+  p1: "Maberuk (Maju Bersama UMK Kelurahan Babatan) merupakan sebuah paguyuban yang dibentuk oleh Kelurahan Babatan, Kecamatan Wiyung, sebagai upaya untuk memperkuat kolaborasi dan kemitraan antar pelaku Usaha Mikro Kecil (UMK) di wilayah tersebut.",
+  p2: "Paguyuban ini menjadi wadah koordinasi dan pendampingan, terutama bagi pelaku UMK pemula, mulai dari proses pendataan, pengurusan legalitas usaha seperti NIB (Nomor Induk Berusaha), hingga fasilitasi pelatihan dan kegiatan promosi seperti bazar UMK.",
+  p3: "Melalui Maberuk, pelaku UMK mendapatkan akses untuk meningkatkan kapasitas usaha, memperluas jaringan, dan memperkuat posisi usaha mereka di tengah persaingan pasar.",
+  p4: "Keberadaan Maberuk menunjukkan sinergi yang baik antara pemerintah kelurahan dan pelaku usaha lokal dalam mewujudkan kemandirian ekonomi masyarakat Babatan.",
+  status: "Paguyuban Aktif",
+  kecamatan: "Wiyung",
+  kota: "Surabaya",
+  ctaTitle: "Bergabung Bersama Kami",
+  ctaDescription: "Daftarkan usaha Anda ke Maberuk dan dapatkan akses pendampingan, pelatihan, serta jaringan pelaku UMK Babatan.",
+  whatsapp: "0812-3456-7890",
+};
+
+const defaultPromptsData = [
+  {
+    id: 1,
+    category: "FOTO PRODUK",
+    title: "Foto Produk Studio Minimalis",
+    prompt: "Foto produk [nama produk] dengan latar belakang polos warna krem, pencahayaan lembut, sudut pandang eye-level, gaya fotografi komersial, resolusi tinggi, fokus tajam pada detail produk.",
+    image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    id: 2,
+    category: "KONTEN SOSIAL MEDIA",
+    title: "Caption Promosi Produk UMKM",
+    prompt: "Buatkan caption Instagram untuk promosi [nama produk] dari UMKM lokal Babatan, gunakan gaya bahasa santai dan ramah, sertakan call-to-action untuk pemesanan via WhatsApp.",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    id: 3,
+    category: "DESAIN LOGO",
+    title: "Konsep Logo Usaha Kuliner",
+    prompt: "Desain logo minimalis untuk usaha kuliner [makanan / minuman], kombinasi ikon sederhana yang merepresentasikan makanan lokal, warna hangat hijau & oranye, gaya modern.",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    id: 4,
+    category: "POSTER PROMOSI",
+    title: "Poster Bazar UMKM",
+    prompt: "Buat desain poster promosi acara Bazar UMKM Babatan, tampilkan judul acara besar di bagian atas, ilustrasi produk-produk lokal seperti makanan dan kerajinan, warna cerah dan menarik.",
+    image: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    id: 5,
+    category: "FOTO PRODUK",
+    title: "Foto Produk Flat Lay",
+    prompt: "Foto flat lay (tampak atas) dari produk [nama produk] diatur rapi bersama bahan-bahan utama, aksesoris kayu, dan daun mint segar. Pencahayaan alami dari jendela.",
+    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    id: 6,
+    category: "DESAIN PRODUK",
+    title: "Deskripsi Produk Marketplace",
+    prompt: "Tuliskan deskripsi produk untuk [nama produk] yang akan diunggah ke marketplace, jelaskan bahan, ukuran, keunggulan, dan cara penyimpanan secara terstruktur agar mudah dibaca.",
+    image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80",
+  },
+];
+
 function ManageWebsiteView() {
-  const [items, setItems] = useState(initialRecommendations);
+  const [activeTab, setActiveTab] = useState<"beranda" | "tentang" | "prompt">("beranda");
+  const [items, setItems] = useState(initialRecommendationsData);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [heroImage, setHeroImage] = useState<string | null>("/images/product-jajanan.png");
+  const [heroImage, setHeroImage] = useState<string | null>("https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=800&q=80");
+
+  const [homeForm, setHomeForm] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("maberuk_home_content");
+      if (saved) {
+        try {
+          return { ...defaultHomeData, ...JSON.parse(saved) };
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    return defaultHomeData;
+  });
+
+  const [aboutForm, setAboutForm] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("maberuk_about_content");
+      if (saved) {
+        try {
+          return { ...initialAboutData, ...JSON.parse(saved) };
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    return initialAboutData;
+  });
+
+  const [promptsList, setPromptsList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("maberuk_prompts_content");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    return defaultPromptsData;
+  });
+
+  const [isAddPromptOpen, setIsAddPromptOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastText, setToastText] = useState("");
+
+  function triggerToast(text: string) {
+    setToastText(text);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3500);
+  }
+
+  function handleSaveHome(e: React.FormEvent) {
+    e.preventDefault();
+    const dataToSave = {
+      ...homeForm,
+      heroImage: heroImage || homeForm.heroImage,
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("maberuk_home_content", JSON.stringify(dataToSave));
+    }
+    triggerToast("✓ Perubahan Halaman Beranda berhasil disimpan ke landing page (/ )!");
+  }
+
+  function handleSaveAbout(e: React.FormEvent) {
+    e.preventDefault();
+    if (typeof window !== "undefined") {
+      localStorage.setItem("maberuk_about_content", JSON.stringify(aboutForm));
+    }
+    triggerToast("✓ Perubahan Halaman Tentang Kami berhasil disimpan ke landing page (/tentang)!");
+  }
+
+  function handleAddPrompt(newPrompt: (typeof defaultPromptsData)[0]) {
+    const updated = [newPrompt, ...promptsList];
+    setPromptsList(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("maberuk_prompts_content", JSON.stringify(updated));
+    }
+    triggerToast("✓ Prompt AI baru berhasil ditambahkan ke direktori prompt (/direktori-prompt)!");
+  }
+
+  function handleDeletePrompt(id: number) {
+    const updated = promptsList.filter((p) => p.id !== id);
+    setPromptsList(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("maberuk_prompts_content", JSON.stringify(updated));
+    }
+    triggerToast("✓ Prompt berhasil dihapus!");
+  }
+
+  function handleHeroFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setHeroImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
 
   function handleDrop(event: DragEvent<HTMLDivElement>, targetIndex: number) {
     event.preventDefault();
@@ -1446,80 +1672,471 @@ function ManageWebsiteView() {
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1fr_0.95fr]">
-      <section className="panel p-5">
-        <h2 className="text-base font-bold text-slate-900">Edit Hero Section</h2>
-        <div className="mt-5 grid gap-4">
-          <label className="cms-label text-slate-700 font-medium">
-            Judul Utama
-            <input className="field font-normal text-slate-800" defaultValue="Temukan Produk UMKM Babatan" />
-          </label>
+    <div className="space-y-5">
+      {/* Sub Tab Switcher */}
+      <div className="panel p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+              activeTab === "beranda"
+                ? "bg-[#10b981] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            onClick={() => setActiveTab("beranda")}
+            type="button"
+          >
+            Halaman Beranda
+          </button>
+          <button
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+              activeTab === "tentang"
+                ? "bg-[#10b981] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            onClick={() => setActiveTab("tentang")}
+            type="button"
+          >
+            Halaman Tentang Kami
+          </button>
+          <button
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+              activeTab === "prompt"
+                ? "bg-[#10b981] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            onClick={() => setActiveTab("prompt")}
+            type="button"
+          >
+            Direktori Prompt (AI)
+          </button>
+        </div>
+      </div>
 
+      {showToast && (
+        <div className="p-4 rounded-xl bg-emerald-500 text-white text-xs font-bold flex items-center justify-between shadow-lg">
+          <span>{toastText}</span>
+          <button onClick={() => setShowToast(false)} className="text-white hover:text-emerald-100" type="button">✕</button>
+        </div>
+      )}
+
+      {activeTab === "beranda" ? (
+        <div className="space-y-5">
+          <section className="panel p-5">
+            <h2 className="text-base font-bold text-slate-900">Edit Hero Section</h2>
+            <div className="mt-4 space-y-4">
+              <label className="cms-label text-slate-700 font-medium">
+                Judul Utama
+                <input className="field font-normal text-slate-800" defaultValue="Temukan Produk UMKM Babatan" />
+              </label>
+            </div>
+            <button
+              className="primary-button bg-[#10b981] hover:bg-[#059669] mt-4"
+              type="button"
+              onClick={() => triggerToast("✓ Perubahan Judul Hero berhasil disimpan!")}
+            >
+              Simpan Hero Section
+            </button>
+          </section>
+
+          <section className="panel p-5">
+            <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Urutkan Rekomendasi UMKM</h2>
+                <p className="mt-0.5 text-xs text-slate-500 font-normal">Geser item toko di bawah ini untuk menentukan posisi tampilan rekomendasi di website.</p>
+              </div>
+              <button
+                className="primary-button bg-[#10b981] hover:bg-[#059669] shrink-0"
+                type="button"
+                onClick={() => triggerToast("✓ Urutan rekomendasi UMKM berhasil disimpan!")}
+              >
+                Simpan Urutan
+              </button>
+            </div>
+
+            <div className="grid gap-3">
+              {items.map((item, index) => (
+                <div
+                  key={item.id}
+                  draggable
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragStart={() => setDraggedIndex(index)}
+                  onDrop={(event) => handleDrop(event, index)}
+                  className={`group relative flex items-center gap-3.5 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-2xs transition-all hover:border-emerald-300 hover:shadow-md cursor-grab active:cursor-grabbing ${
+                    draggedIndex === index ? "opacity-40 scale-[0.99] border-emerald-500 ring-2 ring-emerald-500/20" : ""
+                  }`}
+                >
+                  {/* Grip Handle */}
+                  <div className="flex h-8 w-6 shrink-0 items-center justify-center text-slate-400 group-hover:text-emerald-600 transition-colors">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+                    </svg>
+                  </div>
+
+                  {/* Rank Number Badge */}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 font-extrabold text-xs text-emerald-700 border border-emerald-100/80">
+                    #{index + 1}
+                  </div>
+
+                  {/* Thumbnail Image */}
+                  <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200/60 bg-slate-100">
+                    <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
+                      <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700 uppercase border border-emerald-200/40">
+                        {item.category}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-slate-500 font-normal">
+                      Pemilik: <span className="font-semibold text-slate-700">{item.owner}</span> • {item.rating}
+                    </p>
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200/60 text-[10px] font-semibold text-slate-600">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    {item.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : activeTab === "tentang" ? (
+        <form onSubmit={handleSaveAbout} className="panel p-6 space-y-6">
+          <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Edit Konten Halaman Tentang Kami</h2>
+              <p className="text-xs text-slate-500 font-normal">Kelola judul, deskripsi paguyuban Maberuk, status, dan kontak WhatsApp pada landing page.</p>
+            </div>
+            <button className="primary-button bg-[#10b981] hover:bg-[#059669] shrink-0" type="submit">
+              Simpan Perubahan
+            </button>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Judul Utama Landing Page</label>
+              <input
+                className="field font-normal text-slate-800"
+                value={aboutForm.title}
+                onChange={(e) => setAboutForm({ ...aboutForm, title: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Sub-Judul / Tagline</label>
+              <input
+                className="field font-normal text-slate-800"
+                value={aboutForm.subtitle}
+                onChange={(e) => setAboutForm({ ...aboutForm, subtitle: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2 border-t border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Deskripsi Utama Paguyuban (Siapa Kami)</h3>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Judul Seksi</label>
+              <input
+                className="field font-normal text-slate-800"
+                value={aboutForm.sectionTitle}
+                onChange={(e) => setAboutForm({ ...aboutForm, sectionTitle: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Paragraf 1 (Pengenalan Paguyuban)</label>
+              <textarea
+                className="field min-h-20 py-2 font-normal text-slate-800"
+                value={aboutForm.p1}
+                onChange={(e) => setAboutForm({ ...aboutForm, p1: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Paragraf 2 (Wadah Koordinasi & Legalitas NIB)</label>
+              <textarea
+                className="field min-h-20 py-2 font-normal text-slate-800"
+                value={aboutForm.p2}
+                onChange={(e) => setAboutForm({ ...aboutForm, p2: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Paragraf 3 (Manfaat & Kapasitas Usaha)</label>
+              <textarea
+                className="field min-h-20 py-2 font-normal text-slate-800"
+                value={aboutForm.p3}
+                onChange={(e) => setAboutForm({ ...aboutForm, p3: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Paragraf 4 (Sinergi Kelurahan & Warga)</label>
+              <textarea
+                className="field min-h-20 py-2 font-normal text-slate-800"
+                value={aboutForm.p4}
+                onChange={(e) => setAboutForm({ ...aboutForm, p4: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2 border-t border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Informasi Kartu & Wilayah</h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Status Paguyuban</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  value={aboutForm.status}
+                  onChange={(e) => setAboutForm({ ...aboutForm, status: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Kecamatan</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  value={aboutForm.kecamatan}
+                  onChange={(e) => setAboutForm({ ...aboutForm, kecamatan: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Kota</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  value={aboutForm.kota}
+                  onChange={(e) => setAboutForm({ ...aboutForm, kota: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2 border-t border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Bagian Call To Action (CTA)</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Judul CTA</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  value={aboutForm.ctaTitle}
+                  onChange={(e) => setAboutForm({ ...aboutForm, ctaTitle: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp Admin</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  value={aboutForm.whatsapp}
+                  onChange={(e) => setAboutForm({ ...aboutForm, whatsapp: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi CTA</label>
+              <textarea
+                className="field min-h-16 py-2 font-normal text-slate-800"
+                value={aboutForm.ctaDescription}
+                onChange={(e) => setAboutForm({ ...aboutForm, ctaDescription: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-slate-100">
+            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">
+              Simpan Perubahan Tentang Kami
+            </button>
+          </div>
+        </form>
+      ) : (
+        <section className="panel p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Kelola Direktori Prompt AI</h2>
+              <p className="text-xs text-slate-500 font-normal">Tambah, edit, dan hapus kumpulan prompt siap pakai untuk pelaku UMKM Babatan.</p>
+            </div>
+            <button
+              className="primary-button flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-[#10b981] hover:bg-[#059669] shrink-0"
+              onClick={() => setIsAddPromptOpen(true)}
+              type="button"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Tambah Prompt Baru
+            </button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {promptsList.map((item) => (
+              <div key={item.id} className="panel p-4 flex flex-col justify-between border border-slate-200">
+                <div>
+                  <div className="relative h-36 w-full overflow-hidden rounded-lg bg-slate-100 mb-3">
+                    <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+                    <span className="absolute top-2 left-2 rounded-md bg-white/95 backdrop-blur-xs px-2 py-0.5 text-[9px] font-extrabold text-emerald-700 shadow-xs uppercase">
+                      {item.category}
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-slate-900">{item.title}</h3>
+                  <p className="mt-1 text-[11px] text-slate-500 line-clamp-3 font-normal">{item.prompt}</p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    className="h-7 px-2.5 rounded-md text-xs font-bold text-red-600 hover:bg-red-50 bg-red-50/50 transition-colors flex items-center gap-1"
+                    onClick={() => handleDeletePrompt(item.id)}
+                    type="button"
+                  >
+                    <TrashIcon />
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {isAddPromptOpen && (
+            <AddPromptModal
+              onClose={() => setIsAddPromptOpen(false)}
+              onAdd={handleAddPrompt}
+            />
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function AddPromptModal({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void;
+  onAdd: (newPrompt: (typeof defaultPromptsData)[0]) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("FOTO PRODUK");
+  const [promptText, setPromptText] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+
+  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title || !promptText) return;
+
+    onAdd({
+      id: Date.now(),
+      title,
+      category,
+      prompt: promptText,
+      image: image || "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=600&q=80",
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 className="text-base font-bold text-slate-900">Tambah Prompt AI Baru</h2>
+          <button className="icon-button" onClick={onClose} title="Tutup" type="button">
+            X
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Judul Prompt *</label>
+            <input
+              className="field font-normal text-slate-800"
+              placeholder="Contoh: Foto Produk Studio Minimalis"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Kategori (Badge)</label>
+            <select
+              className="field font-normal text-slate-800"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="FOTO PRODUK">FOTO PRODUK</option>
+              <option value="KONTEN SOSIAL MEDIA">KONTEN SOSIAL MEDIA</option>
+              <option value="DESAIN LOGO">DESAIN LOGO</option>
+              <option value="POSTER PROMOSI">POSTER PROMOSI</option>
+              <option value="DESAIN PRODUK">DESAIN PRODUK</option>
+            </select>
+          </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Gambar Hero Website
+              Gambar Banner *
             </label>
-            <div className="relative rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/30 p-5 flex flex-col items-center justify-center text-center transition-colors cursor-pointer group">
-              {heroImage ? (
-                <div className="w-full flex flex-col items-center gap-3">
-                  <div className="relative h-44 w-full rounded-lg overflow-hidden border border-slate-200 shadow-sm bg-slate-100">
-                    <img src={heroImage} alt="Hero Preview" className="h-full w-full object-cover" />
-                    <button
-                      className="absolute top-2.5 right-2.5 px-3 py-1 rounded-md bg-slate-900/80 hover:bg-red-600 text-white text-xs font-semibold backdrop-blur-sm transition-colors shadow-sm"
-                      onClick={() => setHeroImage(null)}
-                      type="button"
-                    >
-                      Hapus Gambar
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-400 font-normal">Klik untuk mengganti atau unggah gambar hero baru</p>
-                </div>
-              ) : (
-                <div className="py-6 flex flex-col items-center gap-2">
-                  <div className="h-11 w-11 rounded-full bg-emerald-100/80 text-emerald-600 flex items-center justify-center mb-1">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            {image ? (
+              <div className="relative h-36 w-full rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-slate-50">
+                <img src={image} alt="Preview Banner" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setImage(null)}
+                  className="absolute top-2 right-2 px-2.5 py-1 rounded bg-slate-900/80 hover:bg-red-600 text-white text-[11px] font-semibold transition-colors shadow-xs"
+                >
+                  Hapus Gambar
+                </button>
+              </div>
+            ) : (
+              <label className="relative rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/30 p-4 flex flex-col items-center justify-center text-center transition-colors cursor-pointer group">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="sr-only"
+                />
+                <div className="flex flex-col items-center gap-1 py-2">
+                  <div className="h-9 w-9 rounded-full bg-emerald-100/80 text-emerald-600 flex items-center justify-center mb-0.5">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-xs font-bold text-slate-700">Klik atau geser gambar ke sini untuk mengunggah</p>
-                  <p className="text-[11px] text-slate-400">Format PNG, JPG, atau WEBP (Maksimal 5MB)</p>
+                  <p className="text-xs font-bold text-slate-700">Klik untuk Mengunggah / Pilih Gambar</p>
+                  <p className="text-[10px] text-slate-400">PNG, JPG, atau WEBP</p>
                 </div>
-              )}
-            </div>
+              </label>
+            )}
           </div>
-        </div>
-        <button className="primary-button mt-5" type="button">Simpan Hero Section</button>
-      </section>
-
-      <section className="panel p-5">
-        <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Urutkan Rekomendasi UMKM</h2>
-            <p className="mt-1 text-sm text-slate-500 font-normal">Geser item untuk menentukan urutan tampil di website.</p>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Isi Prompt AI *</label>
+            <textarea
+              className="field min-h-24 py-2 font-normal text-slate-800"
+              placeholder="Tuliskan prompt AI lengkap di sini..."
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              required
+            />
           </div>
-          <button className="secondary-button" type="button">Simpan Urutan</button>
-        </div>
-        <div className="grid gap-3">
-          {items.map((item, index) => (
-            <div
-              className={`drag-card ${draggedIndex === index ? "drag-card-active" : ""}`}
-              draggable
-              key={item}
-              onDragOver={(event) => event.preventDefault()}
-              onDragStart={() => setDraggedIndex(index)}
-              onDrop={(event) => handleDrop(event, index)}
-            >
-              <span className="drag-handle">::</span>
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-50 text-xs font-bold text-emerald-600">
-                {index + 1}
-              </span>
-              <div>
-                <p className="font-semibold text-slate-800 text-sm">{item}</p>
-                <p className="text-xs text-slate-500 font-normal">Rekomendasi direktori halaman depan</p>
-              </div>
-            </div>
-          ))}
-        </div>
+          <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <button className="secondary-button" onClick={onClose} type="button">
+              Batal
+            </button>
+            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">
+              Simpan Prompt Baru
+            </button>
+          </div>
+        </form>
       </section>
     </div>
   );
@@ -1725,6 +2342,9 @@ function ProfileView() {
   const [shopAddress, setShopAddress] = useState(
     "Jl. Babatan Indah No. 42, RT 03/RW 05, Kecamatan Wiyung, Surabaya",
   );
+  const [mapQuery, setMapQuery] = useState(
+    "Jl. Babatan Indah No. 42, RT 03/RW 05, Kecamatan Wiyung, Surabaya",
+  );
   const [isLocating, setIsLocating] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<string | null>(null);
 
@@ -1736,9 +2356,9 @@ function ProfileView() {
           const lat = position.coords.latitude.toFixed(6);
           const lng = position.coords.longitude.toFixed(6);
           setGpsCoords(`${lat}, ${lng}`);
-          setShopAddress(
-            `Jl. Babatan Indah No. 42, RT 03/RW 05, Babatan, Kecamatan Wiyung, Surabaya (GPS: ${lat}, ${lng})`,
-          );
+          const newAddr = `Jl. Babatan Indah No. 42, RT 03/RW 05, Babatan, Kecamatan Wiyung, Surabaya (GPS: ${lat}, ${lng})`;
+          setShopAddress(newAddr);
+          setMapQuery(newAddr);
           setIsLocating(false);
         },
         () => {
@@ -1746,9 +2366,9 @@ function ProfileView() {
           const lat = "-7.311245";
           const lng = "112.685412";
           setGpsCoords(`${lat}, ${lng}`);
-          setShopAddress(
-            `Jl. Babatan Indah No. 42, RT 03/RW 05, Babatan, Kecamatan Wiyung, Surabaya (GPS: ${lat}, ${lng})`,
-          );
+          const newAddr = `Jl. Babatan Indah No. 42, RT 03/RW 05, Babatan, Kecamatan Wiyung, Surabaya (GPS: ${lat}, ${lng})`;
+          setShopAddress(newAddr);
+          setMapQuery(newAddr);
           setIsLocating(false);
         },
         { timeout: 4000 },
@@ -1757,9 +2377,9 @@ function ProfileView() {
       const lat = "-7.311245";
       const lng = "112.685412";
       setGpsCoords(`${lat}, ${lng}`);
-      setShopAddress(
-        `Jl. Babatan Indah No. 42, RT 03/RW 05, Babatan, Kecamatan Wiyung, Surabaya (GPS: ${lat}, ${lng})`,
-      );
+      const newAddr = `Jl. Babatan Indah No. 42, RT 03/RW 05, Babatan, Kecamatan Wiyung, Surabaya (GPS: ${lat}, ${lng})`;
+      setShopAddress(newAddr);
+      setMapQuery(newAddr);
       setIsLocating(false);
     }
   }
@@ -1789,85 +2409,128 @@ function ProfileView() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <section className="panel p-6">
-          <h2 className="mb-5 text-base font-bold text-slate-900">Identitas Utama Usaha</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Nama Toko / Usaha
-              </label>
-              <input className="field font-normal text-slate-800" defaultValue="Toko Sari Rasa Babatan" />
-            </div>
+        <div className="space-y-6">
+          {/* Box 1: Identitas Utama Usaha */}
+          <section className="panel p-6">
+            <h2 className="mb-5 text-base font-bold text-slate-900">Identitas Utama Usaha</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nama Toko / Usaha
+                </label>
+                <input className="field font-normal text-slate-800" defaultValue="Toko Sari Rasa Babatan" />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Nama Pemilik
-              </label>
-              <input className="field font-normal text-slate-800" defaultValue="Ibu Endang Sri Lestari" />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nama Pemilik
+                </label>
+                <input className="field font-normal text-slate-800" defaultValue="Ibu Endang Sri Lestari" />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Nomor WhatsApp (Untuk Pemesanan)
-              </label>
-              <div className="relative">
-                {!waNumber && (
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </div>
-                )}
-                <input
-                  className="field font-normal text-slate-800"
-                  style={{ paddingLeft: !waNumber ? "2.25rem" : "0.8rem" }}
-                  placeholder="081234567890"
-                  value={waNumber}
-                  onChange={(e) => setWaNumber(e.target.value)}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nomor WhatsApp (Untuk Pemesanan)
+                </label>
+                <div className="relative">
+                  {!waNumber && (
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </div>
+                  )}
+                  <input
+                    className="field font-normal text-slate-800"
+                    style={{ paddingLeft: !waNumber ? "2.25rem" : "0.8rem" }}
+                    placeholder="081234567890"
+                    value={waNumber}
+                    onChange={(e) => setWaNumber(e.target.value)}
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400 font-normal italic">
+                  Nomor ini digunakan pembeli untuk memesan produk via direct WhatsApp
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Tentang Toko / Deskripsi Singkat
+                </label>
+                <textarea
+                  className="field min-h-24 py-2.5 resize-y"
+                  defaultValue="Menyediakan aneka jajanan pasar tradisional, katering nasi kotak harian, dan aneka sambal botolan legendaris dengan resep turun-temurun asli Babatan."
                 />
               </div>
-              <p className="mt-1.5 text-xs text-slate-400 font-normal italic">
-                Nomor ini digunakan pembeli untuk memesan produk via direct WhatsApp
-              </p>
+            </div>
+          </section>
+
+          {/* Box 2: Alamat & Peta Lokasi Toko */}
+          <section className="panel p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Alamat & Peta Lokasi Toko</h2>
+                <p className="text-xs text-slate-500 font-normal">Ketik alamat toko atau tempel link Google Maps untuk menampilkan peta lokasi fisik toko.</p>
+              </div>
+              <button
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-all border border-emerald-200/80 cursor-pointer shadow-xs active:scale-95 shrink-0"
+                onClick={handleShareLocation}
+                disabled={isLocating}
+                type="button"
+              >
+                {isLocating ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Mendeteksi GPS...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                    </svg>
+                    Share Lokasi Sekarang
+                  </>
+                )}
+              </button>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  Alamat Toko
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Alamat Lengkap Toko *
                 </label>
-                <button
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition-all border border-emerald-200/80 cursor-pointer shadow-xs active:scale-95"
-                  onClick={handleShareLocation}
-                  disabled={isLocating}
-                  type="button"
-                >
-                  {isLocating ? (
-                    <>
-                      <svg className="animate-spin h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Mendeteksi GPS...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                      </svg>
-                      Share Lokasi Sekarang
-                    </>
-                  )}
-                </button>
+                <textarea
+                  className="field min-h-20 py-2.5 resize-y font-normal text-slate-800"
+                  value={shopAddress}
+                  onChange={(e) => {
+                    setShopAddress(e.target.value);
+                    setMapQuery(e.target.value);
+                  }}
+                  placeholder="Contoh: Jl. Babatan Indah No. 42, RT 03/RW 05, Kecamatan Wiyung, Surabaya"
+                />
               </div>
-              <textarea
-                className="field min-h-24 py-2.5 resize-y font-normal text-slate-800"
-                value={shopAddress}
-                onChange={(e) => setShopAddress(e.target.value)}
-              />
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Input Link / Pencarian Lokasi Peta (Google Maps)
+                </label>
+                <input
+                  className="field font-normal text-slate-800"
+                  placeholder="Ketik alamat atau paste link Google Maps di sini..."
+                  value={mapQuery}
+                  onChange={(e) => setMapQuery(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-slate-400 font-normal">
+                  Peta lokasi di bawah akan memperbarui tampilannya secara langsung berdasarkan input alamat/link di atas.
+                </p>
+              </div>
+
               {gpsCoords && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50/80 px-2.5 py-1 rounded-md border border-emerald-200/60">
+                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50/80 px-2.5 py-1.5 rounded-md border border-emerald-200/60">
                   <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
@@ -1875,136 +2538,127 @@ function ProfileView() {
                 </div>
               )}
 
-              {shopAddress.trim() && (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                      <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503-14.258l-6-2.25a2.25 2.25 0 00-1.506 0l-6 2.25A2.25 2.25 0 003 6.75v10.5a2.25 2.25 0 001.247 2.016l6 2.25a2.25 2.25 0 001.506 0l6-2.25A2.25 2.25 0 0021 17.25V6.75a2.25 2.25 0 00-1.247-2.016z" />
-                      </svg>
-                      Preview Peta Lokasi Toko
-                    </div>
-                    <a
-                      className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline"
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopAddress)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Buka Google Maps ↗
-                    </a>
+              {/* Interactive Live Map Preview Box */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                    <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503-14.258l-6-2.25a2.25 2.25 0 00-1.506 0l-6 2.25A2.25 2.25 0 003 6.75v10.5a2.25 2.25 0 001.247 2.016l6 2.25a2.25 2.25 0 001.506 0l6-2.25A2.25 2.25 0 0021 17.25V6.75a2.25 2.25 0 00-1.247-2.016z" />
+                    </svg>
+                    Preview Peta Lokasi Toko
                   </div>
-
-                  <div className="relative h-44 w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-200 shadow-inner">
-                    <iframe
-                      title="Preview Peta Lokasi Toko"
-                      width="100%"
-                      height="100%"
-                      className="w-full h-full border-0"
-                      loading="lazy"
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(shopAddress)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                    />
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 font-normal italic">
-                    Peta ini akan otomatis ditampilkan pada profil usaha Anda untuk mempermudah calon pembeli menemukan lokasi fisik toko.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Tentang Toko / Deskripsi Singkat
-              </label>
-              <textarea
-                className="field min-h-32 py-2.5 resize-y"
-                defaultValue="Menyediakan aneka jajanan pasar tradisional, katering nasi kotak harian, dan aneka sambal botolan legendaris dengan resep turun-temurun asli Babatan."
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Foto Produk & Hasil Jualan Usaha
-              </label>
-              <p className="text-xs text-slate-400 font-normal mb-3">
-                Unggah foto produk jualan UMKM Anda dengan rasio 1:1 agar konsisten dan terlihat rapi di katalog.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                  <img
-                    src="/images/product-jajanan.png"
-                    alt="Jajanan Pasar"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                    Jajanan Pasar
-                  </span>
-                  <button
-                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Hapus foto"
-                    type="button"
+                  <a
+                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline"
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery || shopAddress)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                    Buka Google Maps ↗
+                  </a>
                 </div>
 
-                <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                  <img
-                    src="/images/product-nasikotak.png"
-                    alt="Nasi Kotak"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                <div className="relative h-48 w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-200 shadow-inner">
+                  <iframe
+                    title="Preview Peta Lokasi Toko"
+                    width="100%"
+                    height="100%"
+                    className="w-full h-full border-0"
+                    loading="lazy"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery || shopAddress)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
                   />
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                    Nasi Kotak
-                  </span>
-                  <button
-                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Hapus foto"
-                    type="button"
-                  >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
 
-                <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                  <img
-                    src="/images/product-sambal.png"
-                    alt="Sambal Botol"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                    Sambal Botol
-                  </span>
-                  <button
-                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Hapus foto"
-                    type="button"
-                  >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <button
-                  className="aspect-square rounded-lg border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/40 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-emerald-600 group"
-                  type="button"
-                >
-                  <div className="h-8 w-8 rounded-full bg-slate-200/70 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
-                    <svg className="h-4 w-4 text-slate-500 group-hover:text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-600 group-hover:text-emerald-600">Tambah Foto</span>
-                </button>
+                <p className="text-[11px] text-slate-400 font-normal italic">
+                  Peta ini akan otomatis ditampilkan pada profil usaha Anda untuk mempermudah calon pembeli menemukan lokasi fisik toko.
+                </p>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+
+          {/* Box 3: Foto Produk & Hasil Jualan Usaha (DIBUAT KOTAK SENDIRI) */}
+          <section className="panel p-6">
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <h2 className="text-base font-bold text-slate-900">Foto Produk & Hasil Jualan Usaha</h2>
+              <p className="text-xs text-slate-400 font-normal mt-1">
+                Unggah foto produk jualan UMKM Anda dengan rasio 1:1 agar konsisten dan terlihat rapi di katalog.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                <img
+                  src="/images/product-jajanan.png"
+                  alt="Jajanan Pasar"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
+                  Jajanan Pasar
+                </span>
+                <button
+                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Hapus foto"
+                  type="button"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                <img
+                  src="/images/product-nasikotak.png"
+                  alt="Nasi Kotak"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
+                  Nasi Kotak
+                </span>
+                <button
+                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Hapus foto"
+                  type="button"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
+                <img
+                  src="/images/product-sambal.png"
+                  alt="Sambal Botol"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
+                  Sambal Botol
+                </span>
+                <button
+                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Hapus foto"
+                  type="button"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <button
+                className="aspect-square rounded-lg border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/40 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-emerald-600 group"
+                type="button"
+              >
+                <div className="h-8 w-8 rounded-full bg-slate-200/70 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                  <svg className="h-4 w-4 text-slate-500 group-hover:text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <span className="text-[11px] font-bold text-slate-600 group-hover:text-emerald-600">Tambah Foto</span>
+              </button>
+            </div>
+          </section>
+        </div>
 
         <div className="space-y-6">
           <section className="panel p-6">

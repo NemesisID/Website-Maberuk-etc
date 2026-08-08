@@ -102,6 +102,26 @@ button {
   font-weight: 900;
 }
 
+.super-logout-button {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  min-height: 34px;
+  padding: 0.5rem 0.75rem;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.super-logout-button:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
 .super-user-card {
   display: flex;
   width: 100%;
