@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dokumentasi Proyek Maberuk
 
-## Getting Started
+## Ringkasan Proyek
+Proyek ini adalah aplikasi web dashboard administrasi untuk platform UMKM yang ditujukan untuk dua peran pengguna:
 
-First, run the development server:
+- Super Admin: mengelola data UMKM, produk, konten website, dan pengaturan panel.
+- Admin UMKM: melihat dashboard, mencatat transaksi, melihat laporan, dan mengelola profil usaha.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Aplikasi ini dibangun dengan Next.js, React, TypeScript, dan Tailwind CSS.
+
+## Fitur Utama
+- Dashboard interaktif untuk melihat ringkasan performa usaha
+- Mode Super Admin dan UMKM Admin
+- Halaman pembukuan dengan daftar transaksi
+- Halaman laporan keuangan dan ringkasan bulanan
+- Halaman profil usaha
+- Pengelolaan data UMKM dan produk
+- UI responsif untuk desktop dan mobile
+
+## Teknologi yang Digunakan
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- ESLint
+
+## Struktur Folder
+```text
+app/
+  globals.css      # styling global dan komponen UI tambahan
+  layout.tsx       # layout utama aplikasi
+  page.tsx         # seluruh antarmuka dashboard dan logika tampilan
+public/            # aset publik (jika diperlukan)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Cara Menjalankan Project
+Pastikan Node.js dan npm sudah terpasang.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install dependency:
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Jalankan development server:
+```bash
+npm run dev
+```
 
-## Learn More
+3. Buka browser ke:
+```text
+http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Perintah yang Tersedia
+```bash
+npm run dev      # menjalankan aplikasi dalam mode development
+npm run build    # membangun aplikasi untuk produksi
+npm run start    # menjalankan build produksi
+npm run lint     # menjalankan pemeriksaan ESLint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Catatan Arsitektur
+- Aplikasi saat ini masih bersifat front-end UI/dashboard dengan data contoh yang disimpan langsung di file halaman utama.
+- Semua tampilan utama berada di [app/page.tsx](app/page.tsx).
+- Metadata aplikasi dan layout global berada di [app/layout.tsx](app/layout.tsx).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tujuan Pengembangan
+Project ini bertujuan untuk memberikan tampilan administrasi yang menyerupai panel kontrol UMKM modern, sehingga memudahkan pemilik usaha dan admin melihat performa bisnis secara ringkas.
