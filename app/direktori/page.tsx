@@ -155,17 +155,19 @@ function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 relative">
-          <Link href="/" className="flex items-center gap-2 group">
-            <Image src="/logo-maberuk.webp" alt="Logo MABERUK UMKM Babatan" width={44} height={44} className="rounded-full object-contain" />
-            <div className="flex flex-col leading-tight">
-              <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
-              <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
-            </div>
-          </Link>
+        <div className="flex items-center justify-between h-16">
+          <div className="w-[160px] flex items-center">
+            <Link href="/" className="flex items-center gap-2 group">
+              <Image src="/logo-maberuk.webp" alt="Logo MABERUK UMKM Babatan" width={44} height={44} className="rounded-full object-contain" />
+              <div className="flex flex-col leading-tight">
+                <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
+                <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
+              </div>
+            </Link>
+          </div>
 
           {/* Links – di tengah */}
-          <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-6">
+          <div className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -181,11 +183,11 @@ function Navbar() {
             ))}
           </div>
 
-          {/* Kanan: Masuk + Hamburger */}
-          <div className="flex items-center gap-2">
+          {/* Kanan – lebar tetap, rata kanan */}
+          <div className="w-[160px] flex items-center justify-end gap-2">
             <Link
               href="/masuk"
-              className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm"
+              className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
               Masuk
             </Link>

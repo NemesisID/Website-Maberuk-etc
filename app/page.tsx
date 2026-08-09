@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -134,36 +134,38 @@ export default function Home() {
       {/* â”€â”€ NAVBAR â”€â”€ */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 relative">
+          <div className="flex items-center justify-between h-16">
 
-            {/* Logo – kiri */}
-            <a href="#" className="flex items-center gap-2 group">
-              <Image
-                src="/logo-maberuk.webp"
-                alt="Logo MABERUK UMKM Babatan"
-                width={44}
-                height={44}
-                className="rounded-full object-contain"
-              />
-              <div className="flex flex-col leading-tight">
-                <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
-                <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
-              </div>
-            </a>
+            {/* Logo – kiri, lebar tetap */}
+            <div className="w-[160px] flex items-center">
+              <a href="#" className="flex items-center gap-2 group">
+                <Image
+                  src="/logo-maberuk.webp"
+                  alt="Logo MABERUK UMKM Babatan"
+                  width={44}
+                  height={44}
+                  className="rounded-full object-contain"
+                />
+                <div className="flex flex-col leading-tight">
+                  <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
+                  <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
+                </div>
+              </a>
+            </div>
 
-            {/* Desktop Nav – tengah (absolute) */}
-            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-6">
+            {/* Desktop Nav – tengah */}
+            <div className="hidden md:flex items-center gap-6">
               <a href="#beranda" className="text-sm font-semibold text-green-600 border-b-2 border-green-600 pb-0.5">Beranda</a>
               <a href="/tentang" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Tentang</a>
               <a href="/direktori" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Direktori UMKM</a>
               <a href="/direktori-prompt" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Direktori Prompt</a>
             </div>
 
-            {/* Kanan: Masuk + Hamburger */}
-            <div className="flex items-center gap-2">
+            {/* Kanan – lebar tetap, rata kanan */}
+            <div className="w-[160px] flex items-center justify-end gap-2">
               <a
                 href="/masuk"
-                className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm"
+                className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm whitespace-nowrap"
               >
                 Masuk
               </a>
