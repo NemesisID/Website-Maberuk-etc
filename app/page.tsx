@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import Link from "next/link";
+import { umkmList } from "@/data/umkm";
+
 
 // â”€â”€â”€ ICONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -278,27 +281,21 @@ export default function Home() {
 
           {/* Cards â€“ 4 kolom Ã— 3 baris */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {storeCards.map((card) => (
-              <a
-                key={card.id}
-                href="#direktori"
-                className="group block rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
-              >
-                <div className="relative h-40">
-                  <Image
-                    src={card.img}
-                    alt={card.alt}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    unoptimized
-                  />
-                </div>
-                <div className="px-3 py-2.5 bg-white">
-                  <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{card.category}</span>
-                  <p className="text-sm font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5">{card.title}</p>
-                </div>
-              </a>
-            ))}
+          {umkmList.slice(0, 12).map((item) => (
+  <Link
+    key={item.slug}
+    href={`/direktori/${item.slug}`}
+    className="group block rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+  >
+    <div className="relative h-40">
+      <Image src={item.heroImage} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
+    </div>
+    <div className="px-3 py-2.5 bg-white">
+      <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{item.category}</span>
+      <p className="text-sm font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5">{item.name}</p>
+    </div>
+  </Link>
+))}
           </div>
 
           {/* Mobile "Lihat Semua" */}

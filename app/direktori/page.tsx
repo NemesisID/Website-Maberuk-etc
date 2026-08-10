@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { umkmList } from "@/data/umkm";
 
 // ─── ICONS ─────────────────────────────────────────────
 
@@ -95,50 +96,19 @@ function YoutubeIcon() {
   );
 }
 
-// ─── DUMMY DATA ────────────────────────────────────────
-// Gambar pakai Picsum (seed-based, dijamin selalu tampil, tidak akan broken)
+// ─── DATA ────────────────────────────────────────────
+// Sumber tunggal: umkmList dari data/umkm.ts (24 toko, sama dengan
+// yang dipakai di halaman detail dan beranda).
 
 const categories = ["Kuliner", "Kerajinan", "Fashion", "Minuman", "Sembako", "Jasa", "Pertanian", "Tanaman"];
 
-// Setiap toko punya nama + kata kunci foto (bahasa Inggris) yang spesifik
-// sesuai produk/jasa yang dijual. Pakai SATU tag umum yang pasti banyak
-// tersedia di Flickr — tag gabungan/berbahasa Indonesia sering tidak
-// ketemu sehingga jatuh ke gambar default (itu sebabnya banyak yang sama).
-const storeList: { title: string; category: string; keyword: string }[] = [
-  { title: "Kue Tradisional Bu Sri", category: "Kuliner", keyword: "cake" },
-  { title: "Kerajinan Kayu Pak Darto", category: "Kerajinan", keyword: "woodworking" },
-  { title: "Batik & Tenun Nusantara", category: "Fashion", keyword: "textile" },
-  { title: "Es Kelapa Segar", category: "Minuman", keyword: "coconut" },
-  { title: "Warung Sembako Barokah", category: "Sembako", keyword: "grocery" },
-  { title: "Tas Anyaman Rotan", category: "Kerajinan", keyword: "basket" },
-  { title: "Jajanan Pasar Legendaris", category: "Kuliner", keyword: "streetfood" },
-  { title: "Salon & Rias Cantika", category: "Jasa", keyword: "salon" },
-  { title: "Sayur Organik Segar", category: "Pertanian", keyword: "vegetables" },
-  { title: "Servis Elektronik Jaya", category: "Jasa", keyword: "electronics" },
-  { title: "Tanaman Hias Asri", category: "Tanaman", keyword: "houseplant" },
-  { title: "Katering Rumahan Ibu Nia", category: "Kuliner", keyword: "catering" },
-  { title: "Sate Ayam Pak Bowo", category: "Kuliner", keyword: "satay" },
-  { title: "Ukiran Kayu Jati", category: "Kerajinan", keyword: "woodcarving" },
-  { title: "Konveksi Pakaian Muslim", category: "Fashion", keyword: "tailor" },
-  { title: "Jamu Tradisional Herbal", category: "Minuman", keyword: "herbal" },
-  { title: "Toko Kelontong 24 Jam", category: "Sembako", keyword: "minimart" },
-  { title: "Anyaman Bambu Kreatif", category: "Kerajinan", keyword: "bamboo" },
-  { title: "Nasi Kucing Angkringan", category: "Kuliner", keyword: "streetfood" },
-  { title: "Laundry Kiloan Bersih", category: "Jasa", keyword: "laundry" },
-  { title: "Bibit Tanaman Buah", category: "Tanaman", keyword: "seedling" },
-  { title: "Cuci Motor & Mobil", category: "Jasa", keyword: "carwash" },
-  { title: "Kopi Rakyat Babatan", category: "Minuman", keyword: "coffee" },
-  { title: "Kerupuk Rambak Renyah", category: "Kuliner", keyword: "cracker" },
-];
-
-const storesData = storeList.map((store, i) => ({
-  id: i + 1,
-  title: store.title,
-  category: store.category,
-  // lock={id} membuat gambar tetap konsisten di setiap reload, dan keyword-nya
-  // dibuat spesifik sesuai nama produk/jasa tiap toko.
-  img: `https://loremflickr.com/400/280/${store.keyword}?lock=${i + 1}`,
-  alt: store.title,
+const storesData = umkmList.map((item) => ({
+  id: item.slug,
+  slug: item.slug,
+  title: item.name,
+  category: item.category,
+  img: item.heroImage,
+  alt: item.name,
 }));
 
 // ─── NAVBAR ────────────────────────────────────────────
@@ -428,9 +398,9 @@ export default function DirektoriPage() {
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {paginatedStores.map((card) => (
-                <a
+                <Link
                   key={card.id}
-                  href="#"
+                  href={`/direktori/${card.slug}`}
                   className="group block rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
                 >
                   <div className="relative h-40">
@@ -440,15 +410,15 @@ export default function DirektoriPage() {
                     <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{card.category}</span>
                     <p className="text-sm font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5">{card.title}</p>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {paginatedStores.map((card) => (
-                <a
+                <Link
                   key={card.id}
-                  href="#"
+                  href={`/direktori/${card.slug}`}
                   className="group flex items-center gap-4 rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 p-2"
                 >
                   <div className="relative w-24 h-20 sm:w-32 sm:h-24 flex-shrink-0 rounded-xl overflow-hidden">
@@ -458,7 +428,7 @@ export default function DirektoriPage() {
                     <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{card.category}</span>
                     <p className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5 truncate">{card.title}</p>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           )}
