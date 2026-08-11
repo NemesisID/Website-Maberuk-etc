@@ -26,11 +26,11 @@ function CloseIcon() {
   );
 }
 
-function MailIcon() {
+function UserIcon() {
   return (
     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <rect x="2" y="4" width="20" height="16" rx="2.5" />
-      <path d="m3 6.5 9 6 9-6" />
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }
@@ -68,7 +68,7 @@ function EyeOffIcon() {
 export default function MasukPage() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
@@ -236,24 +236,24 @@ export default function MasukPage() {
                 </div>
               )}
 
-              {/* Email */}
+              {/* Username */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                  Email
+                <label htmlFor="username" className="text-sm font-semibold text-gray-700">
+                  Username
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-                    <MailIcon />
+                    <UserIcon />
                   </span>
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
+                    id="username"
+                    name="username"
+                    type="text"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@email.com"
-                    autoComplete="email"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Masukkan username"
+                    autoComplete="username"
                     className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all shadow-sm"
                   />
                 </div>
@@ -283,7 +283,7 @@ export default function MasukPage() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-green-600 transition-colors z-50 flex items-center justify-center cursor-pointer"
                   >
                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                   </button>

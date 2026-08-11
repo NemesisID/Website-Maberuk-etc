@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 const navLinks = [
   { href: "/", label: "Beranda" },
   { href: "/tentang", label: "Tentang" },
-  { href: "/direktori", label: "Direktori UMKM" },
+  { href: "/direktori", label: "UMKM Babatan" },
   { href: "/direktori-prompt", label: "Direktori Prompt" },
 ];
 

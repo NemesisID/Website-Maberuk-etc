@@ -6,7 +6,7 @@ import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const DEFAULT_STORE_IMAGE = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80";
+const DEFAULT_STORE_IMAGE = "/logo-maberuk.webp";
 
 function getValidStoreImage(store: any): string {
   if (!store) return DEFAULT_STORE_IMAGE;
@@ -72,13 +72,10 @@ function ChevronDown() {
 
 const ITEMS_PER_PAGE = 12;
 
-export default function DirektoriClient({ initialUmkmList }: { initialUmkmList: any[] }) {
-  const categories = useMemo(() => [...new Set(initialUmkmList.map((s) => s.category))].sort(), [initialUmkmList]);
-  
+export default function DirektoriClient({ initialUmkmList, categories = [] }: { initialUmkmList: any[], categories?: string[] }) {
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
-  const [sortBy, setSortBy] = useState("Terpopuler");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState("Default");
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredStores = useMemo(() => {
@@ -174,31 +171,13 @@ export default function DirektoriClient({ initialUmkmList }: { initialUmkmList: 
                 onChange={(e) => setSortBy(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-2.5 text-sm rounded-lg border border-gray-200 bg-white outline-none focus:border-green-500 cursor-pointer"
               >
-                <option>Terpopuler</option>
+                <option>Default</option>
                 <option>A-Z</option>
                 <option>Z-A</option>
               </select>
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <ChevronDown />
               </span>
-            </div>
-
-            {/* View toggle */}
-            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-white">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-green-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}
-                aria-label="Grid view"
-              >
-                <GridIcon />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-green-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}
-                aria-label="List view"
-              >
-                <ListIcon />
-              </button>
             </div>
           </div>
         </div>
@@ -212,7 +191,7 @@ export default function DirektoriClient({ initialUmkmList }: { initialUmkmList: 
             <div className="text-center py-20">
               <p className="text-sm text-gray-500">Tidak ada toko yang cocok dengan pencarian kamu.</p>
             </div>
-          ) : viewMode === "grid" ? (
+          ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {paginatedStores.map((store) => (
                 <Link
@@ -226,24 +205,6 @@ export default function DirektoriClient({ initialUmkmList }: { initialUmkmList: 
                   <div className="px-3 py-2.5 bg-white">
                     <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{store.category}</span>
                     <p className="text-sm font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5">{store.name}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {paginatedStores.map((store) => (
-                <Link
-                  key={store.slug}
-                  href={`/direktori/${store.slug}`}
-                  className="group flex items-center gap-4 rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 p-2"
-                >
-                  <div className="relative w-24 h-20 sm:w-32 sm:h-24 flex-shrink-0 rounded-xl overflow-hidden">
-                    <Image src={getValidStoreImage(store)} alt={store.name || 'UMKM'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{store.category}</span>
-                    <p className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5 truncate">{store.name}</p>
                   </div>
                 </Link>
               ))}

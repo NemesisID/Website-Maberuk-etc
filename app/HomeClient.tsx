@@ -6,8 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-
-// â”€â”€â”€ ICONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const DEFAULT_STORE_IMAGE = "/logo-maberuk.webp";
 
 function LeafIcon({ className = "" }: { className?: string }) {
   return (
@@ -172,7 +171,7 @@ export default function HomeClient({ initialUmkmList }: { initialUmkmList: any[]
     className="group block rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
   >
     <div className="relative h-40">
-      <Image src={item.hero_image || item.heroImage || item.logo_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80'} alt={item.name || 'UMKM'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
+      <Image src={item.hero_image || item.heroImage || item.logo_url || DEFAULT_STORE_IMAGE} alt={item.name || 'UMKM'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
     </div>
     <div className="px-3 py-2.5 bg-white">
       <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{item.category}</span>

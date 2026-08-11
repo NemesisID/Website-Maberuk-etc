@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -96,10 +97,6 @@ export async function uploadFileToR2(formData: FormData) {
     const adminSupabase = getAdminClient();
     
     let targetUmkmId = umkmId;
-    if (!targetUmkmId && user?.email) {
-      const { data: store } = await adminSupabase.from('umkm').select('id').eq('email', user.email).single();
-      if (store) targetUmkmId = store.id;
-    }
     if (!targetUmkmId && user?.id) {
       targetUmkmId = user.id;
     }
@@ -107,14 +104,16 @@ export async function uploadFileToR2(formData: FormData) {
     if (targetUmkmId) {
       const { data: existingStore } = await adminSupabase.from('umkm').select('id').eq('id', targetUmkmId).single();
       
-      if (!existingStore && user?.email) {
-        const slug = `toko-${user.email.split('@')[0]}-${Math.random().toString(36).substring(2, 6)}`;
+      if (!existingStore && user?.id) {
+        const umkmName = `Toko ${user.user_metadata?.name || 'UMKM'}`;
+        const baseSlug = umkmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = `${baseSlug || 'toko'}-${crypto.randomUUID().split('-')[0]}`;
         await adminSupabase.from('umkm').insert({
           id: targetUmkmId,
           slug: slug,
-          name: `Toko ${user.email.split('@')[0]}`,
-          owner: user.user_metadata?.name || user.email.split('@')[0],
-          email: user.email,
+          name: umkmName,
+          owner: user.user_metadata?.name || 'Owner',
+          username: user.id,
           category: 'Lainnya',
           address: 'Babatan, Surabaya',
           active: true
@@ -212,6 +211,7 @@ export async function upsertCategory(category: any) {
     console.error("Error saving category:", error);
     return { success: false, error: error.message };
   }
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 
@@ -222,17 +222,20 @@ export async function deleteCategory(id: number) {
     console.error("Error deleting category:", error);
     return { success: false, error: error.message };
   }
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 
-export async function createNewOwner(data: { name: string; email: string; password?: string; phone?: string; status?: string; storeName?: string }) {
+export async function createNewOwner(data: { name: string; username?: string; email?: string; password?: string; phone?: string; status?: string; storeName?: string }) {
   const adminSupabase = getAdminClient();
 
   let userId = crypto.randomUUID();
   const password = data.password && data.password.trim() ? data.password.trim() : 'password123';
+  const usernameVal = (data.username || data.email || data.name).trim().toLowerCase().replace(/\s+/g, '');
+  const authEmail = usernameVal.includes('@') ? usernameVal : `${usernameVal}@maberuk.com`;
 
   const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
-    email: data.email,
+    email: authEmail,
     password: password,
     email_confirm: true
   });
@@ -245,7 +248,7 @@ export async function createNewOwner(data: { name: string; email: string; passwo
 
   const { error: userError } = await adminSupabase.from('users').upsert({
     id: userId,
-    email: data.email,
+    username: usernameVal,
     name: data.name,
     role: 'umkm',
     status: data.status || 'Aktif',
@@ -258,14 +261,15 @@ export async function createNewOwner(data: { name: string; email: string; passwo
   }
 
   const umkmName = data.storeName?.trim() || `Toko ${data.name.split(" ")[0]}`;
-  const slug = umkmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const baseSlug = umkmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const slug = `${baseSlug || 'toko'}-${crypto.randomUUID().split('-')[0]}`;
 
   const { error: umkmError } = await adminSupabase.from('umkm').upsert({
     id: userId,
     slug: slug,
     name: umkmName,
     owner: data.name,
-    email: data.email,
+    username: usernameVal,
     phone: data.phone || '—',
     phone_digits: data.phone?.replace(/\D/g, '') || '',
     category: 'Lainnya',
@@ -311,11 +315,23 @@ export async function deleteUmkmStore(id: string) {
 
 export async function updateUmkmProfile(umkmId: string, data: any) {
   const supabase = await createClient();
-  const { error } = await supabase.from('umkm').update(data).eq('id', umkmId);
+  if (data.name) {
+    data.slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+  
+  const heroImage = data.hero_image;
+  delete data.logo_url;
+
+  const { error } = await supabase.from('umkm').upsert({ id: umkmId, ...data });
   if (error) {
     console.error("Error updating UMKM profile:", error);
     return { success: false, error: error.message };
   }
+
+  if (heroImage) {
+    await supabase.from('users').update({ avatar: heroImage }).eq('id', umkmId);
+  }
+
   return { success: true };
 }
 

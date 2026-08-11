@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
+import Navbar from "@/components/Navbar";
 
-const DEFAULT_STORE_IMAGE = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80";
+const DEFAULT_STORE_IMAGE = "/logo-maberuk.webp";
 
 function getValidStoreImage(store: any): string {
   if (!store) return DEFAULT_STORE_IMAGE;
@@ -139,6 +140,14 @@ function TiktokIcon() {
   );
 }
 
+function FacebookIcon() {
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.04c-5.5 0-10 4.48-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 0 0 8.44-9.9c0-5.54-4.5-10.02-10-10.02z" />
+    </svg>
+  );
+}
+
 // ─── PAGE ────────────────────────────────────────────────────────────────
 
 export default function DetailUmkmClient({ umkm }: { umkm: any }) {
@@ -168,66 +177,7 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
     <div className="min-h-screen flex flex-col bg-white text-gray-900" style={{ fontFamily: "'Inter', Arial, sans-serif" }}>
 
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="w-[160px] flex items-center">
-              <Link href="/" className="flex items-center gap-2 group">
-                <Image
-                  src="/logo-maberuk.webp"
-                  alt="Logo MABERUK UMKM Babatan"
-                  width={44}
-                  height={44}
-                  className="rounded-full object-contain"
-                />
-                <div className="flex flex-col leading-tight">
-                  <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
-                  <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
-                </div>
-              </Link>
-            </div>
-
-            <div className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Beranda</Link>
-              <Link href="/tentang" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Tentang</Link>
-              <Link href="/direktori" className="text-sm font-semibold text-green-600 border-b-2 border-green-600 pb-0.5">Direktori UMKM</Link>
-              <Link href="/direktori-prompt" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Direktori Prompt</Link>
-            </div>
-
-            <div className="w-[160px] flex items-center justify-end gap-2">
-              <Link
-                href="/masuk"
-                className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm whitespace-nowrap"
-              >
-                Masuk
-              </Link>
-              <button
-                className="md:hidden p-2 rounded-md text-gray-600 hover:text-green-600 hover:bg-green-50 transition-colors"
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Toggle menu"
-              >
-                {menuOpen ? <CloseIcon /> : <MenuIcon />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {menuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3 flex flex-col gap-3 shadow-lg">
-            <Link href="/" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Beranda</Link>
-            <Link href="/tentang" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Tentang</Link>
-            <Link href="/direktori" className="text-sm font-semibold text-green-600" onClick={() => setMenuOpen(false)}>Direktori UMKM</Link>
-            <Link href="/direktori-prompt" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Direktori Prompt</Link>
-            <Link
-              href="/masuk"
-              className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-center"
-              onClick={() => setMenuOpen(false)}
-            >
-              Masuk
-            </Link>
-          </div>
-        )}
-      </nav>
+      <Navbar />
 
       {/* ── BREADCRUMB ── */}
       <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6">
@@ -266,10 +216,6 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
           {/* Info panel */}
           <div className="flex flex-col gap-6">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-                <span className="text-xs font-medium text-green-700 tracking-wide uppercase">Profil UMKM</span>
-              </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight">{umkm.name}</h1>
             </div>
 
@@ -280,55 +226,75 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 text-sm text-gray-700 min-w-0">
                   <span className="text-green-600"><PhoneIcon /></span>
-                  <span className="truncate">{umkm.phone}</span>
+                  <span className="truncate">{umkm.phone || "-"}</span>
                 </div>
-                <button
-                  onClick={handleCopyPhone}
-                  className="flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-700 transition-colors shrink-0"
-                >
-                  {copied ? <CheckIcon /> : <CopyIcon />}
-                  {copied ? "Tersalin" : "Salin"}
-                </button>
+                {umkm.phone && (
+                  <button
+                    onClick={handleCopyPhone}
+                    className="flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-700 transition-colors shrink-0"
+                  >
+                    {copied ? <CheckIcon /> : <CopyIcon />}
+                    {copied ? "Tersalin" : "Salin"}
+                  </button>
+                )}
               </div>
               <div className="flex items-start gap-3 text-sm text-gray-700">
                 <span className="text-green-600 mt-0.5"><PinIcon /></span>
                 <span>{umkm.address}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-gray-700">
-                <span className="text-green-600"><TagIcon /></span>
-                <span>Produk: {umkm.product}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-gray-700">
-                <span className="text-green-600"><QrIcon /></span>
-                <span>QRIS: {umkm.qris ? "Tersedia" : "Belum tersedia"}</span>
-              </div>
             </div>
 
             {/* CTA */}
             <div className="flex items-center gap-3">
-              <a
-                href={umkm.social.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold py-3 rounded-xl transition-colors shadow-sm"
-              >
-                <WhatsAppIcon />
-                Hubungi via WhatsApp
-              </a>
-              <a
-                href={umkm.social.instagram}
-                aria-label="Instagram"
-                className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300 transition-colors"
-              >
-                <InstagramIcon />
-              </a>
-              <a
-                href={umkm.social.tiktok}
-                aria-label="TikTok"
-                className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300 transition-colors"
-              >
-                <TiktokIcon />
-              </a>
+              {umkm.phone ? (
+                <a
+                  href={`https://wa.me/${umkm.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold py-3 rounded-xl transition-colors shadow-sm"
+                >
+                  <WhatsAppIcon />
+                  Hubungi via WhatsApp
+                </a>
+              ) : (
+                <div className="flex-1 flex items-center justify-center gap-2 bg-gray-200 text-gray-500 text-sm font-semibold py-3 rounded-xl shadow-sm cursor-not-allowed">
+                  <WhatsAppIcon />
+                  WhatsApp Tidak Tersedia
+                </div>
+              )}
+              {umkm.social?.instagram && (
+                <a
+                  href={umkm.social.instagram.startsWith('http') ? umkm.social.instagram : `https://instagram.com/${umkm.social.instagram.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300 transition-colors"
+                >
+                  <InstagramIcon />
+                </a>
+              )}
+              {umkm.social?.facebook && (
+                <a
+                  href={umkm.social.facebook.startsWith('http') ? umkm.social.facebook : `https://facebook.com/${umkm.social.facebook}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook"
+                  className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300 transition-colors"
+                >
+                  <FacebookIcon />
+                </a>
+              )}
+              {umkm.social?.tiktok && (
+                <a
+                  href={umkm.social.tiktok.startsWith('http') ? umkm.social.tiktok : `https://tiktok.com/@${umkm.social.tiktok.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="TikTok"
+                  className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300 transition-colors"
+                >
+                  <TiktokIcon />
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -339,28 +305,23 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
         <section className="bg-gray-50 py-14">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-8">
-              <p className="text-xs font-bold tracking-widest text-green-600 uppercase mb-1">Galeri</p>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Produk dari {umkm.name}</h2>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {umkm.gallery.map((item: any, idx: number) => (
                 <button
-                  key={item.caption}
+                  key={item.caption || idx}
                   onClick={() => setLightboxIndex(idx)}
-                  className="group relative h-56 sm:h-64 rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left"
+                  className="group relative h-56 sm:h-64 bg-transparent rounded-2xl overflow-hidden hover:-translate-y-1 transition-all duration-300 text-left"
                 >
                   <Image
                     src={item.src || DEFAULT_STORE_IMAGE}
                     alt={item.caption || 'Foto Galeri UMKM'}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="object-contain group-hover:scale-105 transition-transform duration-500"
                     unoptimized
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" />
-                  <p className="absolute bottom-3 left-3 right-3 text-sm font-semibold text-white leading-snug">
-                    {item.caption}
-                  </p>
                 </button>
               ))}
             </div>
@@ -375,7 +336,7 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
             <div>
               <p className="text-xs font-bold tracking-widest text-green-600 uppercase mb-1">Lokasi</p>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-                Detail Lokasi UMKM {umkm.name}
+                Detail Lokasi {umkm.name}
               </h2>
               <p className="text-sm text-gray-600 leading-relaxed mb-5">
                 Kunjungi langsung lapak {umkm.name} di Babatan, atau hubungi lewat WhatsApp untuk memesan tanpa perlu datang.

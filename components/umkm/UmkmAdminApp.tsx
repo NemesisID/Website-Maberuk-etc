@@ -15,13 +15,16 @@ import { updateUmkmProfile, upsertTransaction, deleteTransaction, getUploadUrl, 
 export function UmkmAdminApp({ 
   user, 
   umkmData,
-  initialTransactions
+  initialTransactions,
+  categories = []
 }: { 
   user: any; 
   umkmData: any;
   initialTransactions: any[];
+  categories?: string[];
 }) {
-  const shopName: string = umkmData?.name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Toko Anda";
+  const shopName: string = umkmData?.name || user?.user_metadata?.name || "Toko Anda";
+  const ownerName: string = umkmData?.owner || user?.user_metadata?.name || "Pemilik Toko";
   const [activeView, setActiveView] = useState<UmkmView>("dashboard");
   const [isModalOpen, setModalOpen] = useState(false);
   const [shopLogo, setShopLogo] = useState<string | null>(umkmData?.logo_url || "/images/logo-maberuk.jpg");
@@ -34,33 +37,56 @@ export function UmkmAdminApp({
     [activeView],
   );
 
-  const monthlyIncome = useMemo(() => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-    const sums = Array(12).fill(0);
-    transactionsList.forEach(t => {
-      if (t.type === 'Pemasukan') {
-        const date = new Date(t.date);
-        if (!isNaN(date.getTime())) {
-          sums[date.getMonth()] += Number(t.amount);
-        }
-      }
-    });
-    return months.map((m, i) => ({ month: m, value: sums[i] / 1000000 }));
-  }, [transactionsList]);
+  const buildMonthlyData = (type: 'Pemasukan' | 'Pengeluaran') => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const validTx = transactionsList.filter(t => t.date && !isNaN(new Date(t.date).getTime()));
+    
+    if (validTx.length === 0) {
+      const curMonth = monthNames[new Date().getMonth()];
+      return [{ month: curMonth, value: 0 }];
+    }
 
-  const monthlyExpense = useMemo(() => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-    const sums = Array(12).fill(0);
+    const dates = validTx.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+    const startDate = new Date(dates[0]);
+    const now = new Date();
+
+    let curr = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const monthKeys: { key: string; label: string }[] = [];
+    const map: Record<string, number> = {};
+    const isMultiYear = startDate.getFullYear() !== now.getFullYear();
+
+    while (curr <= end) {
+      const y = curr.getFullYear();
+      const m = curr.getMonth();
+      const key = `${y}-${m}`;
+      const label = isMultiYear ? `${monthNames[m]} '${String(y).slice(2)}` : monthNames[m];
+      monthKeys.push({ key, label });
+      map[key] = 0;
+      curr.setMonth(curr.getMonth() + 1);
+    }
+
     transactionsList.forEach(t => {
-      if (t.type === 'Pengeluaran') {
-        const date = new Date(t.date);
-        if (!isNaN(date.getTime())) {
-          sums[date.getMonth()] += Number(t.amount);
+      if (t.type === type && t.date) {
+        const d = new Date(t.date);
+        if (!isNaN(d.getTime())) {
+          const key = `${d.getFullYear()}-${d.getMonth()}`;
+          if (map[key] !== undefined) {
+            map[key] += Number(t.amount) || 0;
+          }
         }
       }
     });
-    return months.map((m, i) => ({ month: m, value: sums[i] / 1000000 }));
-  }, [transactionsList]);
+
+    return monthKeys.map(item => ({
+      month: item.label,
+      value: map[item.key]
+    }));
+  };
+
+  const monthlyIncome = useMemo(() => buildMonthlyData('Pemasukan'), [transactionsList]);
+  const monthlyExpense = useMemo(() => buildMonthlyData('Pengeluaran'), [transactionsList]);
 
   const summaryRows = useMemo(() => {
     const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
@@ -89,7 +115,7 @@ export function UmkmAdminApp({
     <div className="min-h-screen bg-[#f6f7f8] text-slate-950">
       {/* Desktop Sidebar (Left) */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[210px] border-r border-slate-200/80 bg-white md:flex md:flex-col">
-        <BrandBlock shopLogo={shopLogo} />
+        <BrandBlock shopLogo={shopLogo} shopName={umkmData?.name || "UMKM"} />
         <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
           {umkmNavItems.map((item) => (
             <button
@@ -103,10 +129,10 @@ export function UmkmAdminApp({
             </button>
           ))}
         </nav>
-        <div className="px-4 pb-6">
+        <div className="px-4 pb-6 mt-auto">
           <form action="/api/auth/logout" method="POST">
             <button
-              className="logout-button"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-base font-bold text-rose-600 hover:bg-rose-50 transition-colors border border-rose-100"
               type="submit"
             >
               <LogoutIcon />
@@ -116,112 +142,16 @@ export function UmkmAdminApp({
         </div>
       </aside>
 
-      {/* Mobile Header (Sticky Top-0) */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur md:hidden">
-        <button
-          type="button"
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
-          aria-label="Buka Menu Navigasi"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
+      {/* Mobile Top Header (Brand only) */}
+      <header className="sticky top-0 z-30 flex items-center justify-center border-b border-slate-200 bg-white px-4 py-4 md:hidden shadow-sm">
+        <div className="flex items-center gap-2">
+          <LogoMark src={shopLogo} />
+          <h1 className="text-base font-bold text-slate-900 tracking-wide">{umkmData?.name || "UMKM Console"}</h1>
+        </div>
       </header>
 
-      {/* Mobile Hamburger Drawer Backdrop */}
-      <div
-        className={`fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-300 md:hidden ${
-          isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={() => setIsMobileMenuOpen(false)}
-        aria-hidden="true"
-      />
-
-      {/* Mobile Hamburger Drawer Menu */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[80vw] max-w-[320px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out md:hidden ${
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <LogoMark src={shopLogo} />
-            <div>
-              <p className="text-xs font-extrabold text-slate-900 tracking-wider">MABERUK</p>
-              <p className="text-[10px] font-medium text-slate-400">UMKM Console</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            aria-label="Tutup Menu Navigasi"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <nav className="flex-1 space-y-1.5 px-4 py-5">
-          {umkmNavItems.map((item) => {
-            const isActive = activeView === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActiveView(item.id);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-                  isActive
-                    ? "bg-emerald-50 text-emerald-600 font-bold"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <UmkmNavIcon id={item.id} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="px-4">
-          <hr className="border-slate-100" />
-        </div>
-
-        <div className="space-y-1.5 p-4">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveView("profile");
-              setIsMobileMenuOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          >
-            <svg className="h-[15px] w-[15px] text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l.546.947a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-.546.948a1.125 1.125 0 01-1.37.491l-1.216-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-1.094c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-.546-.947a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l.546-.948a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span>Pengaturan</span>
-          </button>
-          <form action="/api/auth/logout" method="POST">
-            <button
-              type="submit"
-              className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
-            >
-              <LogoutIcon />
-              <span>Keluar</span>
-            </button>
-          </form>
-        </div>
-      </aside>
-
       {/* Main Container */}
-      <div className="md:pl-[210px]">
+      <div className="md:pl-[210px] pb-24 md:pb-0">
         {/* Page Header (Desktop & Title View) */}
         <header className="sticky top-0 z-10 hidden border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur md:block md:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
@@ -237,7 +167,7 @@ export function UmkmAdminApp({
               </h1>
               <p className="text-sm text-slate-500">
                 {activeView === "dashboard"
-                  ? `Selamat datang kembali, ${shopName}.`
+                  ? `Selamat datang kembali, ${ownerName}.`
                   : activeView === "bookkeeping"
                     ? "Catat dan pantau arus kas masuk dan keluar operasional UMKM Anda."
                     : activeView === "reports"
@@ -272,9 +202,9 @@ export function UmkmAdminApp({
                       ? "Profil Usaha"
                       : "Dashboard"}
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-sm text-slate-500 mt-0.5">
                 {activeView === "dashboard"
-                  ? `Selamat datang kembali, ${shopName}.`
+                  ? `Selamat datang kembali, ${ownerName}.`
                   : activeView === "bookkeeping"
                     ? "Catat & pantau arus kas toko."
                     : activeView === "reports"
@@ -284,7 +214,7 @@ export function UmkmAdminApp({
             </div>
             {activeView === "bookkeeping" && (
               <button
-                className="primary-button text-xs py-2 px-3"
+                className="primary-button text-sm py-2 px-3"
                 onClick={() => setModalOpen(true)}
                 type="button"
               >
@@ -320,16 +250,28 @@ export function UmkmAdminApp({
                 summaryRows={summaryRows}
               />
             )}
-            {activeView === "profile" && (
-              <ProfileView 
-                umkmData={umkmData}
-                shopLogo={shopLogo} 
-                setShopLogo={setShopLogo} 
-              />
-            )}
+            {activeView === "profile" && <ProfileView user={user} umkmData={umkmData} shopLogo={shopLogo} setShopLogo={setShopLogo} categories={categories} />}
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-around bg-white border-t border-slate-200 pb-safe pt-2 shadow-lg md:hidden">
+        {umkmNavItems.map((item) => {
+          const isActive = activeView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveView(item.id)}
+              className={`flex flex-col items-center justify-center w-full py-3 ${isActive ? 'text-emerald-600' : 'text-slate-500'}`}
+            >
+              <UmkmNavIcon id={item.id} />
+              <span className={`text-[12px] font-bold mt-1.5 ${isActive ? 'text-emerald-700' : 'text-slate-500'}`}>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <span className="sr-only">Halaman aktif: {activeView}</span>
 
       {isModalOpen && (
         <TransactionModal 
@@ -349,13 +291,13 @@ export function UmkmAdminApp({
   );
 }
 
-function BrandBlock({ shopLogo }: { shopLogo?: string | null }) {
+function BrandBlock({ shopLogo, shopName }: { shopLogo?: string | null, shopName?: string }) {
   return (
-    <div className="brand-block" title="UMKM Console">
+    <div className="brand-block" title="Dashboard UMKM">
       <LogoMark src={shopLogo} />
       <div>
-        <p className="text-left text-xs font-bold leading-tight text-slate-900 tracking-wide">MABERUK</p>
-        <p className="text-left text-[10px] font-medium leading-tight text-slate-400 mt-0.5">UMKM Console</p>
+        <p className="text-left text-sm font-bold leading-tight text-slate-900 tracking-wide">{shopName}</p>
+        <p className="text-left text-sm font-medium leading-tight text-slate-400 mt-0.5">UMKM Console</p>
       </div>
     </div>
   );
@@ -386,13 +328,10 @@ function MetricCard({
   return (
     <section className="metric-card">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold uppercase text-slate-500">{label}</p>
-        <span className={`metric-mark ${markClass}`}>
-          {tone === "red" ? "OUT" : tone === "blue" ? "US" : "IN"}
-        </span>
+        <p className="text-sm font-bold uppercase text-slate-500">{label}</p>
       </div>
       <p className={`mt-5 text-2xl font-extrabold ${toneClass}`}>{value}</p>
-      <p className={`mt-2 text-xs font-semibold ${toneClass}`}>{trend}</p>
+      <p className={`mt-2 text-sm font-semibold ${toneClass}`}>{trend}</p>
     </section>
   );
 }
@@ -476,7 +415,7 @@ function DashboardView({
       <section className="panel">
         <div className="section-title">
           <h2>Grafik Penjualan Bulanan</h2>
-          <span className="legend-dot">Omset (Juta Rp)</span>
+          <span className="legend-dot">Omset (Rp)</span>
         </div>
         <BarChart data={monthlyIncome.slice(0, 6)} tone="green" />
       </section>
@@ -614,6 +553,26 @@ function ReportsView({
       .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [transactionsList]);
 
+  const handleDownloadExcel = () => {
+    const headers = ["Bulan", "Total Pemasukan", "Total Pengeluaran", "Keuntungan Bersih"];
+    const rows = summaryRows.map(row => row.map(cell => `"${cell}"`).join(";"));
+    const totalRow = [
+      "Total Keseluruhan",
+      `"Rp ${overallIncome.toLocaleString('id-ID')}"`,
+      `"Rp ${overallExpense.toLocaleString('id-ID')}"`,
+      `"Rp ${(overallIncome - overallExpense).toLocaleString('id-ID')}"`
+    ].join(";");
+    
+    const csvContent = [headers.join(";"), ...rows, totalRow].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Laporan_Keuangan_${reportPeriod.replace(' ', '_')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex justify-end">
@@ -634,14 +593,14 @@ function ReportsView({
         <section className="panel">
           <div className="section-title">
             <h2>Total Pemasukan Bulanan</h2>
-            <span className="legend-dot">Omset (Juta Rp)</span>
+            <span className="legend-dot">Omset (Rp)</span>
           </div>
           <BarChart data={monthlyIncome} tone="green" />
         </section>
         <section className="panel">
           <div className="section-title">
             <h2>Total Pengeluaran Bulanan</h2>
-            <span className="legend-dot red">Biaya (Juta Rp)</span>
+            <span className="legend-dot red">Biaya (Rp)</span>
           </div>
           <BarChart data={monthlyExpense} tone="red" />
         </section>
@@ -650,8 +609,7 @@ function ReportsView({
         <div className="section-title px-5 pt-5">
           <h2>Ikhtisar Pembukuan {reportPeriod} Terakhir</h2>
           <div className="flex gap-2">
-            <button className="secondary-button" type="button">Unduh PDF</button>
-            <button className="secondary-button" type="button">Unduh Excel</button>
+            <button className="secondary-button" type="button" onClick={handleDownloadExcel}>Unduh Excel</button>
           </div>
         </div>
         <table className="data-table">
@@ -783,15 +741,18 @@ function ProfileView({
   umkmData,
   shopLogo,
   setShopLogo,
+  categories = []
 }: {
   umkmData: any;
   shopLogo: string | null;
   setShopLogo: (logo: string | null) => void;
+  categories?: string[];
 }) {
   const [name, setName] = useState(umkmData?.name || "");
   const [owner, setOwner] = useState(umkmData?.owner || "");
   const [waNumber, setWaNumber] = useState(umkmData?.phone || "");
   const [description, setDescription] = useState(umkmData?.description || "");
+  const [category, setCategory] = useState(umkmData?.category || "Lainnya");
   const [shopAddress, setShopAddress] = useState(umkmData?.address || "");
   const [mapQuery, setMapQuery] = useState(umkmData?.gps_coords || umkmData?.address || "");
   
@@ -903,10 +864,16 @@ function ProfileView({
       setSaveStatus({ type: 'error', text: "Nama toko wajib diisi!" });
       return;
     }
+    const targetId = umkmData?.id || user?.id;
+    if (!targetId) {
+      setSaveStatus({ type: 'error', text: "Gagal menyimpan: ID akun tidak terdeteksi!" });
+      return;
+    }
     setIsSaving(true);
-    const res = await updateUmkmProfile(umkmData.id, {
+    const res = await updateUmkmProfile(targetId, {
       name,
       owner,
+      category,
       phone: waNumber,
       phone_digits: waNumber.replace(/\D/g, ''),
       description,
@@ -923,7 +890,8 @@ function ProfileView({
         weekendsEnd
       },
       gps_coords: gpsCoords || mapQuery,
-      gallery: galleryList
+      gallery: galleryList,
+      hero_image: shopLogo
     });
     setIsSaving(false);
     if (res.success) {
@@ -949,7 +917,7 @@ function ProfileView({
             {shopLogo ? (
               <>
                 <img src={shopLogo} alt="Logo Toko" className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold text-center p-1">
+                <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-sm font-bold text-center p-1">
                   {isUploading ? "Mengunggah..." : "Ganti Logo"}
                 </div>
               </>
@@ -972,7 +940,7 @@ function ProfileView({
           <div>
             <h2 className="text-base font-bold text-slate-900">Logo Utama Toko</h2>
             <p className="mt-1 text-sm text-slate-500 font-normal">
-              {isUploading ? "Sedang mengunggah logo ke R2..." : "Klik gambar logo di sebelah kiri untuk mengunggah atau mengganti logo toko."}
+              {isUploading ? "Sedang mengunggah logo..." : "Klik gambar logo di sebelah kiri untuk mengunggah atau mengganti logo toko."}
             </p>
           </div>
         </div>
@@ -984,7 +952,7 @@ function ProfileView({
             <h2 className="mb-5 text-base font-bold text-slate-900">Identitas Utama Usaha</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Nama Toko / Usaha
                 </label>
                 <input 
@@ -995,7 +963,7 @@ function ProfileView({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Nama Pemilik
                 </label>
                 <input 
@@ -1006,7 +974,23 @@ function ProfileView({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                  Kategori Usaha
+                </label>
+                <select 
+                  className="field font-normal text-slate-800" 
+                  value={category} 
+                  onChange={(e) => setCategory(e.target.value)} 
+                >
+                  <option value="">-- Pilih Kategori --</option>
+                  {categories.map((c, i) => (
+                    <option key={i} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Nomor WhatsApp (Untuk Pemesanan)
                 </label>
                 <div className="relative">
@@ -1025,13 +1009,13 @@ function ProfileView({
                     onChange={(e) => setWaNumber(e.target.value)}
                   />
                 </div>
-                <p className="mt-1.5 text-xs text-slate-400 font-normal italic">
+                <p className="mt-1.5 text-sm text-slate-400 font-normal italic">
                   Nomor ini digunakan pembeli untuk memesan produk via direct WhatsApp
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Tentang Toko / Deskripsi Singkat
                 </label>
                 <textarea
@@ -1047,10 +1031,10 @@ function ProfileView({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Alamat & Peta Lokasi Toko</h2>
-                <p className="text-xs text-slate-500 font-normal">Ketik nama tempat/alamat atau tempel link Google Maps untuk menampilkan peta lokasi fisik toko.</p>
+                <p className="text-sm text-slate-500 font-normal">Ketik nama tempat/alamat untuk menampilkan peta lokasi fisik toko.</p>
               </div>
               <button
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-all border border-emerald-200/80 cursor-pointer shadow-xs active:scale-95 shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-all border border-emerald-200/80 cursor-pointer shadow-xs active:scale-95 shrink-0"
                 onClick={handleShareLocation}
                 disabled={isLocating}
                 type="button"
@@ -1077,7 +1061,7 @@ function ProfileView({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Alamat Lengkap Toko *
                 </label>
                 <textarea
@@ -1092,8 +1076,8 @@ function ProfileView({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Input Nama Tempat / Alamat / Link Google Maps
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                  Input Nama Tempat / Alamat
                 </label>
                 <input
                   className="field font-normal text-slate-800"
@@ -1101,13 +1085,13 @@ function ProfileView({
                   value={mapQuery}
                   onChange={(e) => setMapQuery(e.target.value)}
                 />
-                <p className="mt-1 text-[11px] text-slate-400 font-normal">
+                <p className="mt-1 text-sm text-slate-400 font-normal">
                   Tips: Anda bisa mengetik nama tempat (contoh: <strong>Gardu Perbatasan Surabaya - Gresik</strong>) atau menempelkan alamat/kode Sematkan Peta.
                 </p>
               </div>
 
               {mapResult.type === "short_url" && !mapResult.embedUrl && (
-                <div className="flex flex-col gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 font-medium">
+                <div className="flex flex-col gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 font-medium">
                   <div className="flex items-center gap-1.5 font-bold text-amber-900">
                     <svg className="h-4 w-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
@@ -1122,22 +1106,17 @@ function ProfileView({
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 shadow-xs space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                    <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503-14.258l-6-2.25a2.25 2.25 0 00-1.506 0l-6 2.25A2.25 2.25 0 003 6.75v10.5a2.25 2.25 0 001.247 2.016l6 2.25a2.25 2.25 0 001.506 0l6-2.25A2.25 2.25 0 0021 17.25V6.75a2.25 2.25 0 00-1.247-2.016z" />
-                    </svg>
-                    Preview Peta Lokasi Toko
-                  </div>
-                  {mapResult.externalUrl && (
-                    <a
-                      className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline"
-                      href={mapResult.externalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <div className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 640 640" 
+                      className="h-4 w-4 text-emerald-600" 
+                      fill="currentColor"
                     >
-                      Buka Google Maps ↗
-                    </a>
-                  )}
+                      <path d="M128 252.6C128 148.4 214 64 320 64C426 64 512 148.4 512 252.6C512 371.9 391.8 514.9 341.6 569.4C329.8 582.2 310.1 582.2 298.3 569.4C248.1 514.9 127.9 371.9 127.9 252.6zM320 320C355.3 320 384 291.3 384 256C384 220.7 355.3 192 320 192C284.7 192 256 220.7 256 256C256 291.3 284.7 320 320 320z"/>
+                    </svg>
+                    Peta Lokasi Toko
+                  </div>
                 </div>
 
                 {mapResult.embedUrl ? (
@@ -1158,14 +1137,10 @@ function ProfileView({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                     </svg>
-                    <p className="text-xs font-bold text-slate-500">Belum Ada Lokasi Toko</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Ketik nama tempat/alamat pada kolom di atas atau klik &quot;Share Lokasi Sekarang&quot;</p>
+                    <p className="text-sm font-bold text-slate-500">Belum Ada Lokasi Toko</p>
+                    <p className="text-sm text-slate-400 mt-0.5">Ketik nama tempat/alamat pada kolom di atas atau klik &quot;Share Lokasi Sekarang&quot;</p>
                   </div>
                 )}
-
-                <p className="text-[11px] text-slate-400 font-normal italic">
-                  Peta ini akan otomatis ditampilkan pada profil usaha Anda untuk mempermudah calon pembeli menemukan lokasi fisik toko.
-                </p>
               </div>
             </div>
           </section>
@@ -1173,22 +1148,16 @@ function ProfileView({
           <section className="panel p-6">
             <div className="border-b border-slate-100 pb-3 mb-4">
               <h2 className="text-base font-bold text-slate-900">Foto Produk & Hasil Jualan Usaha</h2>
-              <p className="text-xs text-slate-400 font-normal mt-1">
-                Unggah foto produk jualan UMKM Anda dengan rasio 1:1 agar konsisten dan terlihat rapi di katalog.
-              </p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {galleryList.map((photo, index) => (
                 <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm" key={index}>
                   <img
-                    src={photo.src}
+                    src={photo.src || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80"}
                     alt={photo.caption || "Foto Produk"}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                    {photo.caption || "Foto Produk"}
-                  </span>
                   <button
                     className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     title="Hapus foto"
@@ -1217,7 +1186,7 @@ function ProfileView({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
-                <span className="text-[11px] font-bold text-slate-600 group-hover:text-emerald-600">
+                <span className="text-sm font-bold text-slate-600 group-hover:text-emerald-600">
                   {isUploadingGallery ? "Mengunggah..." : "Tambah Foto"}
                 </span>
               </label>
@@ -1238,7 +1207,7 @@ function ProfileView({
             <h2 className="mb-5 text-base font-bold text-slate-900">Sosial Media & Kontak</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Instagram
                 </label>
                 <div className="relative">
@@ -1262,7 +1231,7 @@ function ProfileView({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   Facebook Page
                 </label>
                 <div className="relative">
@@ -1284,7 +1253,7 @@ function ProfileView({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
                   TikTok
                 </label>
                 <div className="relative">
@@ -1311,11 +1280,11 @@ function ProfileView({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-5 border-t border-slate-200/80">
         <div>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-sm text-slate-400 font-medium">
             Pastikan data yang Anda isi sudah benar untuk menjaga kredibilitas UMKM
           </p>
           {saveStatus && (
-            <p className={`mt-1.5 text-xs font-bold ${saveStatus.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <p className={`mt-1.5 text-sm font-bold ${saveStatus.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}`}>
               {saveStatus.text}
             </p>
           )}
@@ -1348,16 +1317,16 @@ function TimeRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="font-semibold text-slate-700 text-xs sm:text-sm">{label}</span>
+      <span className="font-semibold text-slate-700 text-sm sm:text-sm">{label}</span>
       <div className="flex items-center gap-2">
         <input 
-          className="field w-20 text-center text-xs py-1.5 px-2 font-medium" 
+          className="field w-20 text-center text-sm py-1.5 px-2 font-medium" 
           value={start} 
           onChange={(e) => onChangeStart(e.target.value)}
         />
-        <span className="text-xs text-slate-400 font-medium">s/d</span>
+        <span className="text-sm text-slate-400 font-medium">s/d</span>
         <input 
-          className="field w-20 text-center text-xs py-1.5 px-2 font-medium" 
+          className="field w-20 text-center text-sm py-1.5 px-2 font-medium" 
           value={end} 
           onChange={(e) => onChangeEnd(e.target.value)}
         />
@@ -1367,21 +1336,23 @@ function TimeRow({
 }
 
 function BarChart({ data, tone }: { data: Array<{ month: string; value: number }>; tone: "green" | "red" }) {
-  const max = Math.max(...data.map((item) => item.value));
+  const max = Math.max(...data.map((item) => item.value), 1);
 
   return (
-    <div className="chart" aria-label="Grafik batang">
-      {data.map((item) => (
-        <div className="chart-item" key={item.month}>
-          <div className="chart-track">
-            <div
-              className={`chart-bar ${tone === "green" ? "bg-emerald-600" : "bg-red-500"}`}
-              style={{ height: `${Math.max(24, (item.value / max) * 112)}px` }}
-            />
+    <div className="overflow-x-auto pb-1">
+      <div className="chart" style={{ minWidth: `${Math.max(data.length * 54, 280)}px` }} aria-label="Grafik batang">
+        {data.map((item, idx) => (
+          <div className="chart-item" key={`${item.month}-${idx}`}>
+            <div className="chart-track">
+              <div
+                className={`chart-bar ${tone === "green" ? "bg-emerald-600" : "bg-red-500"}`}
+                style={{ height: item.value > 0 ? `${Math.max(6, (item.value / max) * 112)}px` : "0px" }}
+              />
+            </div>
+            <span>{item.month}</span>
           </div>
-          <span>{item.month}</span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -1430,7 +1401,7 @@ function TransactionTable({
         {filteredTransactions.map((transaction) => (
           <div className="p-4 space-y-2.5" key={transaction.id}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">{transaction.date}</span>
+              <span className="text-sm font-semibold text-slate-500">{transaction.date}</span>
               <span className={`pill ${transaction.type === "Pemasukan" ? "pill-green" : "pill-red"}`}>
                 {transaction.type}
               </span>
@@ -1438,7 +1409,7 @@ function TransactionTable({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-bold text-slate-800 leading-snug">{transaction.note}</p>
-                <span className="inline-block mt-1 text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                <span className="inline-block mt-1 text-sm font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                   {transaction.category}
                 </span>
               </div>
@@ -1446,7 +1417,7 @@ function TransactionTable({
                 Rp {Number(transaction.amount).toLocaleString('id-ID')}
               </p>
             </div>
-            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+            <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-sm">
               <span className={`pill ${transaction.status === "Selesai" ? "pill-green" : "pill-yellow"}`}>
                 {transaction.status}
               </span>
@@ -1624,12 +1595,12 @@ function TransactionModal({
         </div>
 
         {formError && (
-          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs font-bold text-rose-600">
+          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-bold text-rose-600">
             {formError}
           </div>
         )}
         <div className="form-grid">
-          <label className="text-xs font-semibold text-slate-700">
+          <label className="text-sm font-semibold text-slate-700">
             Tipe Transaksi
             <div className="segmented grid grid-cols-2 mt-1">
               <button
@@ -1648,7 +1619,7 @@ function TransactionModal({
               </button>
             </div>
           </label>
-          <label className="text-xs font-semibold text-slate-700">
+          <label className="text-sm font-semibold text-slate-700">
             Tanggal Transaksi
             <input 
               className="field font-normal text-slate-800" 
@@ -1658,7 +1629,7 @@ function TransactionModal({
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-slate-700">
+            <label className="text-sm font-semibold text-slate-700">
               Kategori
               <select className="field font-normal text-slate-800" onChange={(event) => setCategory(event.target.value)} value={category}>
                 {categories.map((item) => (
@@ -1666,7 +1637,7 @@ function TransactionModal({
                 ))}
               </select>
             </label>
-            <label className="text-xs font-semibold text-slate-700">
+            <label className="text-sm font-semibold text-slate-700">
               Jumlah (Rp)
               <input 
                 className="field font-normal text-slate-800" 
@@ -1676,7 +1647,7 @@ function TransactionModal({
               />
             </label>
           </div>
-          <label className="text-xs font-semibold text-slate-700">
+          <label className="text-sm font-semibold text-slate-700">
             Keterangan
             <textarea
               className="field min-h-24 font-normal text-slate-800 resize-y"

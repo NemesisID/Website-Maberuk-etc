@@ -34,8 +34,6 @@ export default function PromptClient({ initialPrompts }: { initialPrompts: any[]
       {/* Hero Header Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/40 via-white to-transparent py-14 px-6 text-center">
         <div className="mx-auto max-w-3xl">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-700">DIREKTORI PROMPT</span>
-
           <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
             Kumpulan Prompt untuk Pelaku UMKM
           </h1>

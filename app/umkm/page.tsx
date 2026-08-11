@@ -6,34 +6,46 @@ export default async function UmkmPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || !user.email) {
+  if (!user) {
     redirect("/masuk");
   }
 
-  const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single();
-  const isSuperAdmin = dbUser?.role === 'superadmin' || dbUser?.role === 'admin' || user.email === 'super@admin.com';
+  const { data: dbUser } = await supabase.from('users').select('role, username, name').eq('id', user.id).single();
+  const isSuperAdmin = dbUser?.role === 'superadmin' || dbUser?.role === 'admin';
 
   if (isSuperAdmin) {
     redirect("/admin");
   }
 
-  // Ambil data umkm milik user yang login berdasarkan email
+  // Ambil data umkm milik user yang login berdasarkan id
   let { data: umkmData } = await supabase
     .from("umkm")
     .select("*")
-    .eq("email", user.email)
+    .eq("id", user.id)
     .single();
 
+  if (!umkmData && dbUser?.username) {
+    let { data: byUsername } = await supabase
+      .from("umkm")
+      .select("*")
+      .eq("username", dbUser.username)
+      .single();
+    if (byUsername) umkmData = byUsername;
+  }
+
   if (!umkmData) {
-    const slug = `toko-${user.email.split('@')[0]}-${Math.random().toString(36).substring(2, 6)}`;
-    const { data: newUmkm } = await supabase
+    const defaultUsername = dbUser?.username || user.email?.split('@')[0] || 'user';
+    const umkmName = `Toko ${dbUser?.name || defaultUsername}`;
+    const baseSlug = umkmName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const slug = baseSlug || `toko-${user.id.substring(0, 6)}`;
+    const { data: newUmkm, error: createErr } = await supabase
       .from("umkm")
       .insert({
         id: user.id,
         slug: slug,
-        name: `Toko ${user.email.split('@')[0]}`,
-        owner: user.user_metadata?.name || user.email.split('@')[0],
-        email: user.email,
+        name: umkmName,
+        owner: dbUser?.name || defaultUsername,
+        username: defaultUsername,
         category: 'Lainnya',
         address: 'Babatan, Surabaya',
         active: true
@@ -43,6 +55,18 @@ export default async function UmkmPage() {
     
     if (newUmkm) {
       umkmData = newUmkm;
+    } else {
+      console.warn("Auto-create UMKM note:", createErr?.message);
+      umkmData = {
+        id: user.id,
+        slug: slug,
+        name: umkmName,
+        owner: dbUser?.name || defaultUsername,
+        username: defaultUsername,
+        category: 'Lainnya',
+        address: 'Babatan, Surabaya',
+        active: true
+      };
     }
   }
 
@@ -67,5 +91,8 @@ export default async function UmkmPage() {
     }
   }
 
-  return <UmkmAdminApp user={user} umkmData={umkmData} initialTransactions={transactionsList} />;
+  const { data: categories } = await supabase.from('categories').select('name').order('id', { ascending: true });
+  const categoryList = categories?.map(c => c.name) || [];
+
+  return <UmkmAdminApp user={user} umkmData={umkmData} initialTransactions={transactionsList} categories={categoryList} />;
 }
