@@ -6,13 +6,7 @@ import { useState, type FormEvent } from "react";
 
 // ─── ICONS ───────────────────────────────────────────────────────────────
 
-function LeafIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 5.5-8 5.5C15 6 17 4 17 4a8 8 0 0 0-6.35 7.35c-.06.44-.1.88-.1 1.32C10.55 16 9 19 7 22h2l2-3.5c.33.12.69.2 1.07.25C16.21 19.17 19 16.5 17 8z" />
-    </svg>
-  );
-}
+
 
 function MenuIcon() {
   return (
@@ -157,25 +151,58 @@ export default function MasukPage() {
       {/* ── KONTEN LOGIN ── */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* Panel kiri — brand, simpel */}
-        <div className="relative hidden lg:flex lg:w-[42%] flex-col justify-between bg-gradient-to-br from-green-600 to-green-800 text-white p-10 xl:p-12 overflow-hidden">
+        {/* Panel kiri — brand, premium */}
+        <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-green-700 via-green-600 to-emerald-900 text-white p-10 xl:p-14 overflow-hidden">
 
-          <LeafIcon className="absolute -right-16 -bottom-16 w-96 h-96 text-white/10 rotate-12" />
-
-          <div />
-
-          <div className="relative z-10 max-w-sm">
-            <span className="inline-block text-xs font-semibold tracking-wide text-green-100 bg-white/10 px-3 py-1 rounded-full mb-4">
-              Platform Resmi Warga Babatan
-            </span>
-            <h1 className="text-3xl font-extrabold leading-tight">
-              Satu langkah lagi menuju toko digitalmu.
+          {/* Main Copy */}
+          <div className="relative z-10 mt-12">
+            
+            <h1 className="text-4xl xl:text-5xl font-extrabold leading-[1.15] mb-6">
+              Kelola usaha Anda <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 to-green-100">lebih cerdas.</span>
             </h1>
+            
+            <p className="text-sm xl:text-base text-green-50/80 leading-relaxed max-w-sm mb-10">
+              Masuk ke dasbor untuk memperbarui profil etalase toko, mencatat pembukuan, hingga memanfaatkan prompt AI.
+            </p>
+
+            <div className="flex flex-col gap-4">
+               <div className="flex items-center gap-3.5 group">
+                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-white/20 transition-colors">
+                    <svg className="w-4 h-4 text-emerald-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                 </div>
+                 <span className="text-sm font-medium text-emerald-50">Manajemen Katalog Etalase</span>
+               </div>
+               <div className="flex items-center gap-3.5 group">
+                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-white/20 transition-colors">
+                    <svg className="w-4 h-4 text-emerald-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                 </div>
+                 <span className="text-sm font-medium text-emerald-50">Pencatatan Pembukuan Digital</span>
+               </div>
+               <div className="flex items-center gap-3.5 group">
+                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-white/20 transition-colors">
+                    <svg className="w-4 h-4 text-emerald-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                 </div>
+                 <span className="text-sm font-medium text-emerald-50">Akses Kumpulan Prompt AI</span>
+               </div>
+            </div>
           </div>
 
-          <p className="relative z-10 text-xs text-green-100/80">
-            © 2026 MABERUK — UMKM Babatan
-          </p>
+          {/* Footer Area */}
+          <div className="relative z-10 flex items-center justify-between mt-16 pt-6 border-t border-white/10">
+             <p className="text-xs font-medium text-green-100/60">
+               © 2026 MABERUK
+             </p>
+             <div className="flex gap-4 text-xs font-medium text-green-100/60">
+                <a href="#" className="hover:text-white transition-colors">Bantuan</a>
+             </div>
+          </div>
         </div>
 
         {/* Panel kanan — form */}
@@ -185,10 +212,6 @@ export default function MasukPage() {
 
           <div className="relative z-10 w-full max-w-sm bg-white rounded-3xl shadow-xl shadow-green-900/5 border border-gray-100 p-8 sm:p-9">
 
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-              <span className="text-xs font-medium text-green-700 tracking-wide">Masuk ke akun</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-6">Selamat datang kembali</h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">

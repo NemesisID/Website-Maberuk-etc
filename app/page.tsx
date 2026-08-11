@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { umkmList } from "@/data/umkm";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 
 // â”€â”€â”€ ICONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -33,21 +35,7 @@ function ArrowRightIcon() {
   );
 }
 
-function MenuIcon() {
-  return (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
 
-function CloseIcon() {
-  return (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
-  );
-}
 
 function MedalIcon() {
   return (
@@ -76,39 +64,7 @@ function GlobeIcon() {
   );
 }
 
-function InstagramIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-    </svg>
-  );
-}
-
-function TwitterIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
-
-function YoutubeIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z" />
-    </svg>
-  );
-}
-
-// â”€â”€â”€ STORE CARDS DATA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— STORE CARDS DATA ———————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
 const storeCards = [
   { id: 1, title: "Kue Tradisional", category: "Kuliner", img: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&h=280&fit=crop", alt: "Kue tradisional" },
@@ -125,95 +81,24 @@ const storeCards = [
   { id: 12, title: "Katering Rumahan", category: "Kuliner", img: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=280&fit=crop", alt: "Katering rumahan" },
 ];
 
-// â”€â”€â”€ MAIN PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— MAIN PAGE —————————————————————————————————————————————————————
 
 export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-gray-900" style={{ fontFamily: "'Inter', Arial, sans-serif" }}>
+    <div className="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
 
-      {/* â”€â”€ NAVBAR â”€â”€ */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      {/* ── NAVBAR ── */}
+      <Navbar />
 
-            {/* Logo – kiri, lebar tetap */}
-            <div className="w-[160px] flex items-center">
-              <a href="#" className="flex items-center gap-2 group">
-                <Image
-                  src="/logo-maberuk.webp"
-                  alt="Logo MABERUK UMKM Babatan"
-                  width={44}
-                  height={44}
-                  className="rounded-full object-contain"
-                />
-                <div className="flex flex-col leading-tight">
-                  <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
-                  <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
-                </div>
-              </a>
-            </div>
-
-            {/* Desktop Nav – tengah */}
-            <div className="hidden md:flex items-center gap-6">
-              <a href="#beranda" className="text-sm font-semibold text-green-600 border-b-2 border-green-600 pb-0.5">Beranda</a>
-              <a href="/tentang" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Tentang</a>
-              <a href="/direktori" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Direktori UMKM</a>
-              <a href="/direktori-prompt" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Direktori Prompt</a>
-            </div>
-
-            {/* Kanan – lebar tetap, rata kanan */}
-            <div className="w-[160px] flex items-center justify-end gap-2">
-              <a
-                href="/masuk"
-                className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm whitespace-nowrap"
-              >
-                Masuk
-              </a>
-              <button
-                className="md:hidden p-2 rounded-md text-gray-600 hover:text-green-600 hover:bg-green-50 transition-colors"
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Toggle menu"
-              >
-                {menuOpen ? <CloseIcon /> : <MenuIcon />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {menuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3 flex flex-col gap-3 shadow-lg">
-            <a href="#beranda" className="text-sm font-semibold text-green-600" onClick={() => setMenuOpen(false)}>Beranda</a>
-            <a href="#tentang" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Tentang</a>
-            <a href="/direktori" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Direktori UMKM</a>
-            <a href="/direktori-prompt" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Direktori Prompt</a>
-            <a
-              href="/masuk"
-              className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-center"
-              onClick={() => setMenuOpen(false)}
-            >
-              Masuk
-            </a>
-          </div>
-        )}
-      </nav>
-
-      {/* â”€â”€ HERO â”€â”€ */}
+      {/* ── HERO ── */}
       <section id="beranda" className="bg-green-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
 
             {/* Left Content */}
             <div className="flex flex-col gap-5">
-              {/* Badge */}
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-                <span className="text-xs font-medium text-green-700 tracking-wide">Platform Resmi Warga Kelurahan Babatan</span>
-              </div>
-
               {/* Heading */}
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-gray-900">
                 Platform Digital untuk{" "}
@@ -223,7 +108,7 @@ export default function Home() {
               {/* Description */}
               <p className="text-base text-gray-600 leading-relaxed max-w-md">
                 Gabungkan kearifan lokal dengan teknologi modern. Bantu usaha warga sekitar
-                bertumbuh secara digital melalui etalase mandiri dan sistem pembukuan terpadu.
+                bertumbuh secara digital melalui etalase mandiri, dukungan prompt AI, dan sistem pembukuan terpadu.
               </p>
 
               {/* Search */}
@@ -236,7 +121,7 @@ export default function Home() {
                     type="text"
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
-                    placeholder="Cari produk atau UMKM unggulan..."
+                    placeholder="Cari Nama UMKM unggulan..."
                     className="w-full pl-9 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all shadow-sm"
                   />
                 </div>
@@ -261,7 +146,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* â”€â”€ TOKO UNGGULAN â”€â”€ */}
+      {/* ── TOKO UNGGULAN ── */}
       <section id="direktori" className="py-14 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -272,15 +157,15 @@ export default function Home() {
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Kunjungi Toko Unggulan Warga</h2>
             </div>
             <a
-              href="#direktori"
+              href="/direktori"
               className="hidden sm:flex items-center text-sm font-semibold text-green-600 hover:text-green-700 transition-colors gap-1 whitespace-nowrap"
             >
               Lihat Semua Direktori <ArrowRightIcon />
             </a>
           </div>
 
-          {/* Cards â€“ 4 kolom Ã— 3 baris */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Cards – 3 kolom × 4 baris */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {umkmList.slice(0, 12).map((item) => (
   <Link
     key={item.slug}
@@ -307,7 +192,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* â”€â”€ FITUR UTAMA â”€â”€ */}
+      {/* ── FITUR UTAMA ── */}
       <section id="kategori" className="py-14 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -323,11 +208,11 @@ export default function Home() {
             {/* Card 1 */}
             <div className="bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
               <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-5 text-green-600">
-                <MedalIcon />
+                <GlobeIcon />
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Gratis &amp; Mudah Digunakan</h3>
+              <h3 className="text-base font-bold text-gray-900 mb-2">Etalase & Direktori Digital</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Tidak ada biaya tersembunyi. Buat profil tokomu dalam 5 menit langsung dari HP-mu.
+                Promosikan produk dan usaha Anda secara gratis melalui katalog resmi kelurahan yang mudah diakses masyarakat luas.
               </p>
             </div>
 
@@ -338,101 +223,25 @@ export default function Home() {
               </div>
               <h3 className="text-base font-bold text-gray-900 mb-2">Pembukuan Digital</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Catat pemasukan dan pengeluaran harian UMKM-mu tanpa perlu pusing menggunakan excel/kertas.
+                Catat pemasukan dan pengeluaran harian UMKM-mu secara sistematis tanpa perlu pusing menggunakan buku manual atau excel.
               </p>
             </div>
 
             {/* Card 3 */}
             <div className="bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
               <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-5 text-orange-500">
-                <GlobeIcon />
+                <MedalIcon />
               </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Jangkauan Lebih Luas</h3>
+              <h3 className="text-base font-bold text-gray-900 mb-2">Direktori Prompt AI</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Produk tokomu dapat diakses oleh ribuan calon pelanggan lokal di area Babatan dan sekitarnya.
+                Tingkatkan kualitas promosi dengan bantuan prompt cerdas siap pakai untuk caption medsos, foto produk, dan desain.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* â”€â”€ FOOTER â”€â”€ */}
-      <footer id="tentang" className="bg-gray-900 text-gray-300">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-
-            {/* Brand */}
-            <div className="lg:col-span-1">
-              <a href="#" className="flex items-center gap-3 mb-4">
-                <Image
-                  src="/logo-maberuk.png"
-                  alt="Logo MABERUK UMKM Babatan"
-                  width={56}
-                  height={56}
-                  className="rounded-full object-contain"
-                />
-                <div className="flex flex-col leading-tight">
-                  <span className="font-extrabold text-white text-base">MABERUK</span>
-                  <span className="text-xs text-gray-400 font-medium">UMKM Babatan</span>
-                </div>
-              </a>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                Memberdayakan pelaku usaha mikro, kecil, dan menengah di wilayah Babatan melalui digitalisasi toko dan penyederhanaan pembukuan.
-              </p>
-            </div>
-
-            {/* Navigasi */}
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Navigasi</h4>
-              <ul className="flex flex-col gap-2.5">
-                <li><a href="#beranda" className="text-sm text-gray-400 hover:text-green-400 transition-colors">Beranda</a></li>
-                <li><a href="#direktori" className="text-sm text-gray-400 hover:text-green-400 transition-colors">Direktori UMKM</a></li>
-                <li><a href="#kategori" className="text-sm text-gray-400 hover:text-green-400 transition-colors">Kategori</a></li>
-                <li><a href="#tentang" className="text-sm text-gray-400 hover:text-green-400 transition-colors">Tentang Kami</a></li>
-              </ul>
-            </div>
-
-            {/* Kontak */}
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Kontak &amp; Support</h4>
-              <ul className="flex flex-col gap-2.5">
-                <li className="text-sm text-gray-400">Email: info@umkmbabatan.id</li>
-                <li className="text-sm text-gray-400">WhatsApp: +62 812-3456-7890</li>
-                <li className="text-sm text-gray-400">Kantor Kelurahan Babatan, Lantai 2</li>
-              </ul>
-            </div>
-
-            {/* Sosial */}
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Ikuti Kami</h4>
-              <div className="flex items-center gap-3">
-                <a href="#" aria-label="Instagram" className="w-10 h-10 rounded-full bg-gray-800 hover:bg-green-600 flex items-center justify-center transition-colors">
-                  <InstagramIcon />
-                </a>
-                <a href="#" aria-label="Facebook" className="w-10 h-10 rounded-full bg-gray-800 hover:bg-green-600 flex items-center justify-center transition-colors">
-                  <FacebookIcon />
-                </a>
-                <a href="#" aria-label="Twitter / X" className="w-10 h-10 rounded-full bg-gray-800 hover:bg-green-600 flex items-center justify-center transition-colors">
-                  <TwitterIcon />
-                </a>
-                <a href="#" aria-label="YouTube" className="w-10 h-10 rounded-full bg-gray-800 hover:bg-green-600 flex items-center justify-center transition-colors">
-                  <YoutubeIcon />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-gray-500">Â© 2026 UMKM Babatan. Semua Hak Dilindungi Undang-Undang.</p>
-            <p className="text-xs text-gray-500">
-              Dibuat dengan{" "}
-              <span className="text-red-400">â™¥</span>{" "}
-              untuk Babatan Hebat
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -233,7 +233,6 @@ export const initialRecommendationsData: RecommendationItem[] = [
 ];
 
 export const defaultHomeData: HomeData = {
-  heroBadge: "Platform Resmi Warga Kelurahan Babatan",
   heroTitle: "Platform Digital untuk",
   heroTitleHighlight: "UMKM Babatan",
   heroSubtitle:
@@ -345,7 +344,6 @@ export const initialAboutData: AboutData = {
   p2: "Paguyuban ini menjadi wadah koordinasi dan pendampingan, terutama bagi pelaku UMK pemula, mulai dari proses pendataan, pengurusan legalitas usaha seperti NIB (Nomor Induk Berusaha), hingga fasilitasi pelatihan dan kegiatan promosi seperti bazar UMK.",
   p3: "Melalui Maberuk, pelaku UMK mendapatkan akses untuk meningkatkan kapasitas usaha, memperluas jaringan, dan memperkuat posisi usaha mereka di tengah persaingan pasar.",
   p4: "Keberadaan Maberuk menunjukkan sinergi yang baik antara pemerintah kelurahan dan pelaku usaha lokal dalam mewujudkan kemandirian ekonomi masyarakat Babatan.",
-  status: "Paguyuban Aktif",
   kecamatan: "Wiyung",
   kota: "Surabaya",
   ctaTitle: "Bergabung Bersama Kami",

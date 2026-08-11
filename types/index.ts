@@ -39,7 +39,6 @@ export interface RecommendationItem {
 }
 
 export interface HomeData {
-  heroBadge: string;
   heroTitle: string;
   heroTitleHighlight: string;
   heroSubtitle: string;
@@ -77,7 +76,6 @@ export interface AboutData {
   p2: string;
   p3: string;
   p4: string;
-  status: string;
   kecamatan: string;
   kota: string;
   ctaTitle: string;

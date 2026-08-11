@@ -3,21 +3,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
-function MenuIcon() {
-  return (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-function CloseIcon() {
-  return (
-    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
-  );
-}
+
+
 
 const defaultPrompts = [
   {
@@ -68,7 +58,6 @@ export default function PromptDirectoryPage() {
   const [prompts, setPrompts] = useState(defaultPrompts);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("maberuk_prompts_content");
@@ -95,68 +84,9 @@ export default function PromptDirectoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafcfb] text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col bg-[#fafcfb] text-slate-900 font-sans">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="w-[160px] flex items-center">
-              <Link href="/" className="flex items-center gap-2 group">
-                <Image
-                  src="/logo-maberuk.webp"
-                  alt="Logo MABERUK UMKM Babatan"
-                  width={44}
-                  height={44}
-                  className="rounded-full object-contain"
-                />
-                <div className="flex flex-col leading-tight">
-                  <span className="font-extrabold text-gray-900 text-base">MABERUK</span>
-                  <span className="text-xs text-gray-500 font-medium">UMKM Babatan</span>
-                </div>
-              </Link>
-            </div>
-
-            <div className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Beranda</Link>
-              <Link href="/tentang" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Tentang</Link>
-              <Link href="/direktori" className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors">Direktori UMKM</Link>
-              <span className="text-sm font-semibold text-green-600 border-b-2 border-green-600 pb-0.5">Direktori Prompt</span>
-            </div>
-
-            <div className="w-[160px] flex items-center justify-end gap-2">
-              <Link
-                href="/masuk"
-                className="hidden md:inline-flex px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 rounded-lg transition-colors shadow-sm whitespace-nowrap"
-              >
-                Masuk
-              </Link>
-              <button
-                className="md:hidden p-2 rounded-md text-gray-600 hover:text-green-600 hover:bg-green-50 transition-colors"
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Toggle menu"
-              >
-                {menuOpen ? <CloseIcon /> : <MenuIcon />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {menuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3 flex flex-col gap-3 shadow-lg">
-            <Link href="/" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Beranda</Link>
-            <Link href="/tentang" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Tentang</Link>
-            <Link href="/direktori" className="text-sm font-medium text-gray-600" onClick={() => setMenuOpen(false)}>Direktori UMKM</Link>
-            <span className="text-sm font-semibold text-green-600">Direktori Prompt</span>
-            <Link
-              href="/masuk"
-              className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-center"
-              onClick={() => setMenuOpen(false)}
-            >
-              Masuk
-            </Link>
-          </div>
-        )}
-      </nav>
+      <Navbar />
 
       {/* Hero Header Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/40 via-white to-transparent py-14 px-6 text-center">
@@ -238,25 +168,7 @@ export default function PromptDirectoryPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-gray-900 text-gray-400 py-10 px-6 text-xs">
-        <div className="mx-auto max-w-6xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <Image
-              src="/logo-maberuk.webp"
-              alt="Logo MABERUK"
-              width={28}
-              height={28}
-              className="rounded-full object-contain"
-            />
-            <div>
-              <p className="font-bold text-white tracking-wide">MABERUK</p>
-              <p className="text-[10px] text-gray-500">Paguyuban UMK Kelurahan Babatan</p>
-            </div>
-          </div>
-          <p className="text-[11px] text-gray-500">© 2026 Maberuk Babatan. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

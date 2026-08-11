@@ -465,9 +465,6 @@ export default function DetailUmkmPage() {
 
           <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-gray-500">© 2026 UMKM Babatan. Semua Hak Dilindungi Undang-Undang.</p>
-            <p className="text-xs text-gray-500">
-              Dibuat dengan <span className="text-red-400">♥</span> untuk Babatan Hebat
-            </p>
           </div>
         </div>
       </footer>

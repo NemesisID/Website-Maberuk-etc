@@ -13,6 +13,7 @@ import {
   umkmAccounts,
 } from "@/data/mock-data";
 import {
+  EditIcon,
   LogoMark,
   LogoutIcon,
   SuperNavIcon,
@@ -24,6 +25,7 @@ export function SuperAdminApp() {
   const router = useRouter();
   const [activeView, setActiveView] = useState<SuperView>("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sharedUmkmList, setSharedUmkmList] = useState<UmkmAccount[]>(umkmAccounts);
 
   const activeLabel = useMemo(
     () => superNavItems.find((item) => item.id === activeView)?.label ?? "Dashboard",
@@ -33,7 +35,7 @@ export function SuperAdminApp() {
   return (
     <div className="min-h-screen bg-[#f4f6f8] text-slate-950">
       {/* Desktop Sidebar (Left) */}
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[180px] bg-[#1f2a3a] text-slate-300 md:flex md:flex-col">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[180px] bg-[#1f2a3a] text-slate-300 md:flex md:flex-col">
         <SuperBrandBlock />
         <nav className="flex flex-1 flex-col gap-3 px-6 py-5">
           {superNavItems.map((item) => (
@@ -208,9 +210,16 @@ export function SuperAdminApp() {
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 md:px-8 overflow-x-hidden">
           <div key={activeView} className="view-transition">
             {activeView === "dashboard" && <SuperDashboardView />}
-            {activeView === "umkm" && <ManageUmkmView />}
+            {activeView === "umkm" && (
+              <ManageUmkmView
+                accountsList={sharedUmkmList}
+                setAccountsList={setSharedUmkmList}
+              />
+            )}
             {activeView === "website" && <ManageWebsiteView />}
-            {activeView === "users" && <ManageUsersView />}
+            {activeView === "users" && (
+              <ManageUsersView onAddUmkm={(u) => setSharedUmkmList((prev) => [u, ...prev])} />
+            )}
           </div>
         </main>
       </div>
@@ -361,12 +370,16 @@ function BarChart({
   );
 }
 
-function ManageUmkmView() {
-  const [accountsList, setAccountsList] = useState(umkmAccounts);
+function ManageUmkmView({
+  accountsList,
+  setAccountsList,
+}: {
+  accountsList: UmkmAccount[];
+  setAccountsList: React.Dispatch<React.SetStateAction<UmkmAccount[]>>;
+}) {
   const [selected, setSelected] = useState(accountsList[0]);
   const [statusFilter, setStatusFilter] = useState<"Aktif" | "Nonaktif">("Aktif");
   const [search, setSearch] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const activeCount = accountsList.filter((item) => item.status === "Aktif").length;
   const inactiveCount = accountsList.length - activeCount;
@@ -378,19 +391,13 @@ function ManageUmkmView() {
         .includes(search.toLowerCase()),
   );
   const visibleSelected =
-    filteredAccounts.find((account) => account.name === selected.name) ?? filteredAccounts[0] ?? selected;
-
-  function handleAddUmkm(newUmkm: UmkmAccount) {
-    setAccountsList([newUmkm, ...accountsList]);
-    setSelected(newUmkm);
-    setStatusFilter(newUmkm.status === "Nonaktif" ? "Nonaktif" : "Aktif");
-  }
+    filteredAccounts.find((account) => account.name === selected?.name) ?? filteredAccounts[0] ?? selected;
 
   function handleDeleteUmkm(targetName: string) {
     const updated = accountsList.filter((acc) => acc.name !== targetName);
     setAccountsList(updated);
-    if (selected.name === targetName) {
-      setSelected(updated[0] ?? umkmAccounts[0]);
+    if (selected?.name === targetName) {
+      setSelected(updated[0] ?? accountsList[0]);
     }
   }
 
@@ -423,16 +430,9 @@ function ManageUmkmView() {
                 Nonaktif ({inactiveCount})
               </button>
             </div>
-            <button
-              className="primary-button flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-[#10b981] hover:bg-[#059669] shrink-0"
-              onClick={() => setIsAddModalOpen(true)}
-              type="button"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Tambah UMKM
-            </button>
+            <p className="text-[11px] text-slate-400 font-medium italic">
+              Profil UMKM dibuat otomatis saat Owner didaftarkan.
+            </p>
           </div>
           <input
             className="field lg:w-64"
@@ -561,12 +561,6 @@ function ManageUmkmView() {
         </section>
       )}
 
-      {isAddModalOpen && (
-        <AddUmkmModal
-          onClose={() => setIsAddModalOpen(false)}
-          onAdd={handleAddUmkm}
-        />
-      )}
     </div>
   );
 }
@@ -578,166 +572,9 @@ function formatIndonesianDate(dateStr: string) {
   return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function AddUmkmModal({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void;
-  onAdd: (newUmkm: UmkmAccount) => void;
-}) {
-  const [name, setName] = useState("");
-  const [owner, setOwner] = useState("");
-  const [phone, setPhone] = useState("");
-  const [category, setCategory] = useState("Makanan & Minuman");
-  const [address, setAddress] = useState("");
-  const [status, setStatus] = useState<"Aktif" | "Nonaktif">("Aktif");
-  const [joinedDate, setJoinedDate] = useState(() => new Date().toISOString().split("T")[0]);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name || !owner) return;
 
-    onAdd({
-      name,
-      owner,
-      phone: phone || "0812-0000-0000",
-      status,
-      joined: formatIndonesianDate(joinedDate),
-      category,
-      address: address || "Surabaya",
-      products: 0,
-      revenue: "Rp 0",
-    });
-    onClose();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
-      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900">Tambah UMKM Terdaftar Baru</h2>
-          <button className="icon-button" onClick={onClose} title="Tutup" type="button">
-            X
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Nama Toko / Usaha *
-            </label>
-            <input
-              className="field font-normal text-slate-800"
-              placeholder="Contoh: Kedai Kopi Babatan"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Nama Pemilik *
-            </label>
-            <input
-              className="field font-normal text-slate-800"
-              placeholder="Contoh: Supriatna"
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Nomor Telepon / WhatsApp
-              </label>
-              <input
-                className="field font-normal text-slate-800"
-                placeholder="0812-3456-7890"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Kategori
-              </label>
-              <select
-                className="field font-normal text-slate-800"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <option>Makanan & Minuman</option>
-                <option>Fashion & Pakaian</option>
-                <option>Kerajinan Tangan</option>
-                <option>Jasa & Lainnya</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Tanggal Terdaftar / Masuk *
-            </label>
-            <input
-              type="date"
-              className="field font-normal text-slate-800"
-              value={joinedDate}
-              onChange={(e) => setJoinedDate(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Alamat Usaha
-            </label>
-            <textarea
-              className="field min-h-20 py-2 font-normal text-slate-800"
-              placeholder="Jl. Babatan Indah No..."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Status Usaha
-            </label>
-            <div className="flex gap-4 pt-1">
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  checked={status === "Aktif"}
-                  onChange={() => setStatus("Aktif")}
-                  className="accent-emerald-600"
-                />
-                Aktif
-              </label>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  checked={status === "Nonaktif"}
-                  onChange={() => setStatus("Nonaktif")}
-                  className="accent-slate-600"
-                />
-                Nonaktif
-              </label>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button className="secondary-button" onClick={onClose} type="button">
-              Batal
-            </button>
-            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">
-              Simpan UMKM Baru
-            </button>
-          </div>
-        </form>
-      </section>
-    </div>
-  );
-}
-
-function ManageUsersView() {
+function ManageUsersView({ onAddUmkm }: { onAddUmkm: (umkm: UmkmAccount) => void }) {
   const [usersList, setUsersList] = useState(sampleUsers);
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -760,8 +597,9 @@ function ManageUsersView() {
     setUsersList(usersList.filter((user) => user.id !== id));
   }
 
-  function handleAddUser(newUser: UserItem) {
+  function handleAddUser(newUser: UserItem, autoUmkm: UmkmAccount) {
     setUsersList([newUser, ...usersList]);
+    onAddUmkm(autoUmkm);
   }
 
   return (
@@ -906,6 +744,8 @@ function ManageUsersView() {
           onAdd={handleAddUser}
         />
       )}
+
+      {/* Info: UMKM profile is auto-generated when a new Owner is added */}
     </div>
   );
 }
@@ -915,11 +755,12 @@ function AddUserModal({
   onAdd,
 }: {
   onClose: () => void;
-  onAdd: (newUser: UserItem) => void;
+  onAdd: (newUser: UserItem, autoUmkm: UmkmAccount) => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role] = useState("UMKM Owner");
+  const [storeName, setStoreName] = useState("");
+  const [phone, setPhone] = useState("");
   const [status, setStatus] = useState("Aktif");
   const [registeredDate, setRegisteredDate] = useState(() => new Date().toISOString().split("T")[0]);
 
@@ -927,15 +768,33 @@ function AddUserModal({
     e.preventDefault();
     if (!name || !email) return;
 
-    onAdd({
-      id: Date.now(),
-      name,
-      email,
-      role,
-      status,
-      registered: formatIndonesianDate(registeredDate),
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    });
+    const joinedStr = formatIndonesianDate(registeredDate);
+    const umkmName = storeName.trim() || `Toko ${name.split(" ")[0]}`;
+
+    const autoUmkm: UmkmAccount = {
+      name: umkmName,
+      owner: name,
+      phone: phone || "—",
+      status: status as "Aktif" | "Nonaktif",
+      joined: joinedStr,
+      category: "Lainnya",
+      address: "Babatan, Surabaya",
+      products: 0,
+      revenue: "Rp 0",
+    };
+
+    onAdd(
+      {
+        id: Date.now(),
+        name,
+        email,
+        role: "UMKM Owner",
+        status,
+        registered: joinedStr,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
+      },
+      autoUmkm,
+    );
     onClose();
   }
 
@@ -948,47 +807,48 @@ function AddUserModal({
             X
           </button>
         </div>
+        <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-100 px-3.5 py-3">
+          <p className="text-[11px] font-bold text-emerald-700">✦ Auto-generate Profil UMKM</p>
+          <p className="text-[11px] text-emerald-600 font-normal mt-0.5">
+            Profil UMKM default akan dibuat otomatis dan muncul di Kelola UMKM. Owner bisa mengeditnya sendiri setelah login.
+          </p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Nama Lengkap *
-            </label>
-            <input
-              className="field font-normal text-slate-800"
-              placeholder="Contoh: Supriyadi"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Email *
-            </label>
-            <input
-              className="field font-normal text-slate-800"
-              type="email"
-              placeholder="contoh@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Peran (Role)
-              </label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap *</label>
               <input
-                className="field font-normal text-slate-800 bg-slate-100 cursor-not-allowed"
-                value="UMKM Owner"
-                disabled
+                className="field font-normal text-slate-800"
+                placeholder="Contoh: Supriyadi"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Status
-              </label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Email *</label>
+              <input
+                className="field font-normal text-slate-800"
+                type="email"
+                placeholder="contoh@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WhatsApp</label>
+              <input
+                className="field font-normal text-slate-800"
+                placeholder="0812-3456-7890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Status Akun</label>
               <select
                 className="field font-normal text-slate-800"
                 value={status}
@@ -1001,8 +861,18 @@ function AddUserModal({
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Tanggal Terdaftar / Masuk *
+              Nama Toko / Usaha
+              <span className="ml-1.5 text-slate-400 font-normal">(opsional — default: "Toko [Nama]")</span>
             </label>
+            <input
+              className="field font-normal text-slate-800"
+              placeholder="Contoh: Kedai Kopi Babatan"
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Terdaftar *</label>
             <input
               type="date"
               className="field font-normal text-slate-800"
@@ -1012,11 +882,9 @@ function AddUserModal({
             />
           </div>
           <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button className="secondary-button" onClick={onClose} type="button">
-              Batal
-            </button>
+            <button className="secondary-button" onClick={onClose} type="button">Batal</button>
             <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">
-              Simpan Owner UMKM
+              Buat Akun &amp; Profil UMKM
             </button>
           </div>
         </form>
@@ -1032,6 +900,7 @@ function ManageWebsiteView() {
   const [showToast, setShowToast] = useState(false);
   const [toastText, setToastText] = useState("");
   const [isAddPromptOpen, setIsAddPromptOpen] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<PromptItem | null>(null);
 
   const [aboutForm, setAboutForm] = useState(() => {
     if (typeof window !== "undefined") {
@@ -1092,6 +961,16 @@ function ManageWebsiteView() {
       localStorage.setItem("maberuk_prompts_content", JSON.stringify(updated));
     }
     triggerToast("✓ Prompt berhasil dihapus!");
+  }
+
+  function handleEditPrompt(updated: PromptItem) {
+    const next = promptsList.map((p) => (p.id === updated.id ? updated : p));
+    setPromptsList(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("maberuk_prompts_content", JSON.stringify(next));
+    }
+    setEditingPrompt(null);
+    triggerToast("✓ Prompt berhasil diperbarui!");
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>, targetIndex: number) {
@@ -1188,25 +1067,6 @@ function ManageWebsiteView() {
 
       {activeTab === "beranda" ? (
         <div className="space-y-4 sm:space-y-5">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900">Edit Hero Section</h2>
-            <div className="mt-3 space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Judul Utama
-                </label>
-                <input className="field text-xs sm:text-sm font-normal text-slate-800" defaultValue={defaultHomeData.heroTitle} />
-              </div>
-            </div>
-            <button
-              className="primary-button bg-[#10b981] hover:bg-[#059669] text-xs font-bold py-2.5 px-4 mt-4 w-full sm:w-auto"
-              type="button"
-              onClick={() => triggerToast("✓ Perubahan Judul Hero berhasil disimpan!")}
-            >
-              Simpan Hero Section
-            </button>
-          </section>
-
           <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
             <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
@@ -1456,7 +1316,15 @@ function ManageWebsiteView() {
                   <h3 className="text-xs font-bold text-slate-900">{item.title}</h3>
                   <p className="mt-1 text-[11px] text-slate-500 line-clamp-3 font-normal">{item.prompt}</p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-2">
+                  <button
+                    className="h-7 px-2.5 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-100 bg-slate-50 transition-colors flex items-center gap-1 border border-slate-200"
+                    onClick={() => setEditingPrompt(item)}
+                    type="button"
+                  >
+                    <EditIcon />
+                    Edit
+                  </button>
                   <button
                     className="h-7 px-2.5 rounded-md text-xs font-bold text-red-600 hover:bg-red-50 bg-red-50/50 transition-colors flex items-center gap-1"
                     onClick={() => handleDeletePrompt(item.id)}
@@ -1474,6 +1342,14 @@ function ManageWebsiteView() {
             <AddPromptModal
               onClose={() => setIsAddPromptOpen(false)}
               onAdd={handleAddPrompt}
+            />
+          )}
+
+          {editingPrompt && (
+            <EditPromptModal
+              prompt={editingPrompt}
+              onClose={() => setEditingPrompt(null)}
+              onSave={handleEditPrompt}
             />
           )}
         </section>
@@ -1594,6 +1470,101 @@ function AddPromptModal({
           <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button className="secondary-button" onClick={onClose} type="button">Batal</button>
             <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">Simpan Prompt Baru</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function EditPromptModal({
+  prompt,
+  onClose,
+  onSave,
+}: {
+  prompt: PromptItem;
+  onClose: () => void;
+  onSave: (updated: PromptItem) => void;
+}) {
+  const [title, setTitle] = useState(prompt.title);
+  const [category, setCategory] = useState(prompt.category);
+  const [promptText, setPromptText] = useState(prompt.prompt);
+  const [image, setImage] = useState<string>(prompt.image);
+
+  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title || !promptText) return;
+    onSave({ ...prompt, title, category, prompt: promptText, image });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Edit Prompt AI</h2>
+            <p className="text-xs text-slate-400 font-normal mt-0.5 truncate max-w-[280px]">{prompt.title}</p>
+          </div>
+          <button className="icon-button" onClick={onClose} title="Tutup" type="button">✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Judul Prompt *</label>
+            <input
+              className="field font-normal text-slate-800"
+              placeholder="Contoh: Foto Produk Studio Minimalis"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Kategori (Badge)</label>
+            <select
+              className="field font-normal text-slate-800"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="FOTO PRODUK">FOTO PRODUK</option>
+              <option value="KONTEN SOSIAL MEDIA">KONTEN SOSIAL MEDIA</option>
+              <option value="DESAIN LOGO">DESAIN LOGO</option>
+              <option value="POSTER PROMOSI">POSTER PROMOSI</option>
+              <option value="DESAIN PRODUK">DESAIN PRODUK</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Gambar Banner</label>
+            <div className="relative h-36 w-full rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-slate-50 mb-2">
+              <img src={image} alt="Preview Banner" className="h-full w-full object-cover" />
+              <label className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                <input type="file" accept="image/*" onChange={handleImageFileChange} className="sr-only" />
+                <span className="rounded-lg bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-800 shadow">Ganti Gambar</span>
+              </label>
+            </div>
+            <p className="text-[10px] text-slate-400">Hover gambar lalu klik untuk mengganti. PNG, JPG, atau WEBP.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Isi Prompt AI *</label>
+            <textarea
+              className="field min-h-24 py-2 font-normal text-slate-800"
+              placeholder="Tuliskan prompt AI lengkap di sini..."
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <button className="secondary-button" onClick={onClose} type="button">Batal</button>
+            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">Simpan Perubahan</button>
           </div>
         </form>
       </section>
