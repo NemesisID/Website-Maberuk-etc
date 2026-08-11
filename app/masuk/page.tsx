@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { login } from "./actions";
 
 // ─── ICONS ───────────────────────────────────────────────────────────────
 
@@ -64,18 +66,30 @@ function EyeOffIcon() {
 // ─── PAGE ────────────────────────────────────────────────────────────────
 
 export default function MasukPage() {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    // TODO: sambungkan ke endpoint autentikasi
-    setTimeout(() => setSubmitting(false), 900);
+    setErrorMsg("");
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const res = await login(formData);
+    
+    if (res?.error) {
+      setErrorMsg(res.error);
+      setSubmitting(false);
+    } else if (res?.success) {
+      router.push('/admin');
+      router.refresh(); // Ensure layout checks new session
+    }
   }
 
   return (
@@ -216,6 +230,12 @@ export default function MasukPage() {
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
 
+              {errorMsg && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+                  {errorMsg}
+                </div>
+              )}
+
               {/* Email */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="email" className="text-sm font-semibold text-gray-700">
@@ -227,6 +247,7 @@ export default function MasukPage() {
                   </span>
                   <input
                     id="email"
+                    name="email"
                     type="email"
                     required
                     value={email}
@@ -249,6 +270,7 @@ export default function MasukPage() {
                   </span>
                   <input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}

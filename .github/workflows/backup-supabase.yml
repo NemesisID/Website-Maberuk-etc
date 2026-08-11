@@ -1,0 +1,41 @@
+name: Auto Backup Supabase
+
+on:
+  schedule:
+    # Run every day at 02:00 WIB (19:00 UTC)
+    - cron: '0 19 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Create backup directory
+        run: mkdir -p backups
+
+      - name: Run pg_dump
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          BACKUP_FILE="backups/supabase_backup_$TIMESTAMP.sql"
+          
+          # Use connection string format
+          # postgres://[user]:[password]@[host]:[port]/[db]
+          # Make sure the host is the direct connection, not the connection pooler (port 5432)
+          pg_dump -h ${{ secrets.SUPABASE_DB_HOST }} -p 5432 -U postgres -d postgres -F p -f $BACKUP_FILE
+          
+          echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
+
+      - name: Upload Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30

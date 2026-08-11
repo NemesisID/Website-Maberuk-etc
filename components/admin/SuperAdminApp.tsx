@@ -21,11 +21,21 @@ import {
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
 
-export function SuperAdminApp() {
+export function SuperAdminApp({ 
+  user, 
+  initialUmkmList, 
+  initialPromptsList, 
+  initialContentList 
+}: { 
+  user: any;
+  initialUmkmList: any[];
+  initialPromptsList: any[];
+  initialContentList: any[];
+}) {
   const router = useRouter();
   const [activeView, setActiveView] = useState<SuperView>("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [sharedUmkmList, setSharedUmkmList] = useState<UmkmAccount[]>(umkmAccounts);
+  const [sharedUmkmList, setSharedUmkmList] = useState<any[]>(initialUmkmList.length > 0 ? initialUmkmList : umkmAccounts);
 
   const activeLabel = useMemo(
     () => superNavItems.find((item) => item.id === activeView)?.label ?? "Dashboard",
