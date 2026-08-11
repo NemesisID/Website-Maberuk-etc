@@ -6,6 +6,19 @@ import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const DEFAULT_STORE_IMAGE = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80";
+
+function getValidStoreImage(store: any): string {
+  if (!store) return DEFAULT_STORE_IMAGE;
+  const candidates = [store.hero_image, store.heroImage, store.logo_url, store.logoUrl];
+  for (const src of candidates) {
+    if (src && typeof src === 'string' && src.trim() !== '') {
+      return src.trim();
+    }
+  }
+  return DEFAULT_STORE_IMAGE;
+}
+
 // ─── ICONS ─────────────────────────────────────────────
 
 function SearchIcon() {
@@ -208,7 +221,7 @@ export default function DirektoriClient({ initialUmkmList }: { initialUmkmList: 
                   className="group block rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300"
                 >
                   <div className="relative h-40">
-                    <Image src={store.hero_image || store.heroImage} alt={store.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
+                    <Image src={getValidStoreImage(store)} alt={store.name || 'UMKM'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
                   </div>
                   <div className="px-3 py-2.5 bg-white">
                     <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{store.category}</span>
@@ -226,7 +239,7 @@ export default function DirektoriClient({ initialUmkmList }: { initialUmkmList: 
                   className="group flex items-center gap-4 rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 p-2"
                 >
                   <div className="relative w-24 h-20 sm:w-32 sm:h-24 flex-shrink-0 rounded-xl overflow-hidden">
-                    <Image src={store.hero_image || store.heroImage} alt={store.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
+                    <Image src={getValidStoreImage(store)} alt={store.name || 'UMKM'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{store.category}</span>

@@ -5,6 +5,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
 
+const DEFAULT_STORE_IMAGE = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80";
+
+function getValidStoreImage(store: any): string {
+  if (!store) return DEFAULT_STORE_IMAGE;
+  const candidates = [store.hero_image, store.heroImage, store.logo_url, store.logoUrl];
+  for (const src of candidates) {
+    if (src && typeof src === 'string' && src.trim() !== '') {
+      return src.trim();
+    }
+  }
+  return DEFAULT_STORE_IMAGE;
+}
+
 // ─── ICONS ───────────────────────────────────────────────────────────────
 
 function MenuIcon() {
@@ -238,8 +251,8 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
             aria-label="Perbesar foto utama"
           >
             <Image
-              src={umkm.hero_image || umkm.heroImage}
-              alt={umkm.name}
+              src={getValidStoreImage(umkm)}
+              alt={umkm.name || 'Foto UMKM'}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-500"
               unoptimized
@@ -331,15 +344,15 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {umkm.gallery.map((item, idx) => (
+              {umkm.gallery.map((item: any, idx: number) => (
                 <button
                   key={item.caption}
                   onClick={() => setLightboxIndex(idx)}
                   className="group relative h-56 sm:h-64 rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left"
                 >
                   <Image
-                    src={item.src}
-                    alt={item.caption}
+                    src={item.src || DEFAULT_STORE_IMAGE}
+                    alt={item.caption || 'Foto Galeri UMKM'}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     unoptimized

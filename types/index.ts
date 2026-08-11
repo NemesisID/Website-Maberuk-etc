@@ -59,9 +59,10 @@ export interface HomepageStore {
 }
 
 export interface UserItem {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
+  password?: string;
   role: string;
   status: string;
   registered: string;

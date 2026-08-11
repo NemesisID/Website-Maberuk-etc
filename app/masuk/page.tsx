@@ -87,11 +87,7 @@ export default function MasukPage() {
       setErrorMsg(res.error);
       setSubmitting(false);
     } else if (res?.success) {
-      if (email === "super@admin.com") {
-        router.push("/admin");
-      } else {
-        router.push("/umkm");
-      }
+      router.push(res.targetUrl || '/admin');
       router.refresh(); // Ensure layout checks new session
     }
   }

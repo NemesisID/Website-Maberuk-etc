@@ -19,7 +19,7 @@ import {
   TrashIcon,
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
-import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory } from "@/app/admin/actions";
+import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore } from "@/app/admin/actions";
 
 export function SuperAdminApp({ 
   user, 
@@ -390,11 +390,17 @@ function ManageUmkmView({
   const visibleSelected =
     filteredAccounts.find((account) => account.name === selected?.name) ?? filteredAccounts[0] ?? selected;
 
-  function handleDeleteUmkm(targetName: string) {
-    const updated = accountsList.filter((acc) => acc.name !== targetName);
-    setAccountsList(updated);
-    if (selected?.name === targetName) {
-      setSelected(updated[0] ?? accountsList[0]);
+  async function handleDeleteUmkm(targetName: string) {
+    if (confirm(`Apakah Anda yakin ingin menghapus toko UMKM "${targetName}"?`)) {
+      const targetAcc = accountsList.find(a => a.name === targetName);
+      if (targetAcc && (targetAcc as any).id) {
+        await deleteUmkmStore((targetAcc as any).id);
+      }
+      const updated = accountsList.filter((acc) => acc.name !== targetName);
+      setAccountsList(updated);
+      if (selected?.name === targetName) {
+        setSelected(updated[0] ?? accountsList[0]);
+      }
     }
   }
 
@@ -575,6 +581,8 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
   const [usersList, setUsersList] = useState<any[]>(initialUsersList);
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<any | null>(null);
+  const [showPasswordId, setShowPasswordId] = useState<string | null>(null);
 
   const filteredUsers = usersList.filter((u) =>
     `${u.name} ${u.email}`.toLowerCase().includes(search.toLowerCase()),
@@ -590,13 +598,14 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
   }
 
   async function handleDeleteUser(id: string) {
-    setUsersList(usersList.filter((u) => u.id !== id));
-    await deleteUserAction(id);
+    if (confirm("Apakah Anda yakin ingin menghapus pengguna ini?")) {
+      setUsersList(usersList.filter((u) => u.id !== id));
+      await deleteUserAction(id);
+    }
   }
 
   async function handleAddUser(newUser: any, autoUmkm: UmkmAccount) {
     setUsersList([newUser, ...usersList]);
-    await upsertUser(newUser);
     onAddUmkm(autoUmkm);
   }
 
@@ -634,12 +643,13 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
 
       <section className="panel overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="data-table w-full min-w-[850px]">
+          <table className="data-table w-full min-w-[950px]">
             <thead>
               <tr>
                 <th>Avatar</th>
                 <th>Nama Lengkap</th>
                 <th>Email</th>
+                <th>Kata Sandi / Password</th>
                 <th>Peran (Role)</th>
                 <th>Status</th>
                 <th>Terdaftar</th>
@@ -656,6 +666,21 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
                   </td>
                   <td className="font-bold text-slate-900">{user.name}</td>
                   <td className="text-slate-600 font-normal">{user.email}</td>
+                  <td>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {showPasswordId === user.id ? (user.password || 'password123') : '••••••••'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordId(showPasswordId === user.id ? null : user.id)}
+                        className="text-slate-400 hover:text-emerald-600 text-[10px] font-bold transition-colors"
+                        title="Lihat / Sembunyikan Kata Sandi"
+                      >
+                        {showPasswordId === user.id ? "Sembunyi" : "Lihat"}
+                      </button>
+                    </div>
+                  </td>
                   <td>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -684,7 +709,8 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
                   <td>
                     <div className="flex items-center justify-end gap-1.5">
                       <button
-                        className="h-7 w-7 rounded-md grid place-items-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                        className="h-7 w-7 rounded-md grid place-items-center text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                        onClick={() => setResetPasswordUser(user)}
                         title="Reset Kata Sandi"
                         type="button"
                       >
@@ -724,13 +750,11 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
         </div>
         <div className="flex flex-col gap-3 px-5 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100">
           <span className="text-xs text-slate-500 font-normal">
-            Menampilkan 1-{filteredUsers.length} dari 2.891 total pengguna
+            Menampilkan 1-{filteredUsers.length} dari {usersList.length} total pengguna
           </span>
           <div className="flex gap-1.5">
             <button className="page-button" type="button">Sebelumnya</button>
             <button className="page-button active" type="button">1</button>
-            <button className="page-button" type="button">2</button>
-            <button className="page-button" type="button">3</button>
             <button className="page-button" type="button">Berikutnya</button>
           </div>
         </div>
@@ -743,7 +767,86 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
         />
       )}
 
-      {/* Info: UMKM profile is auto-generated when a new Owner is added */}
+      {resetPasswordUser && (
+        <ResetPasswordModal
+          user={resetPasswordUser}
+          onClose={() => setResetPasswordUser(null)}
+          onSuccess={(userId, newPass) => {
+            setUsersList(prev => prev.map(u => u.id === userId ? { ...u, password: newPass } : u));
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ResetPasswordModal({
+  user,
+  onClose,
+  onSuccess,
+}: {
+  user: any;
+  onClose: () => void;
+  onSuccess: (userId: string, newPass: string) => void;
+}) {
+  const [newPassword, setNewPassword] = useState("password123");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPassword.trim()) return;
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    const res = await resetUserPassword(user.id, newPassword);
+    setIsSubmitting(false);
+
+    if (res.success) {
+      onSuccess(user.id, res.newPassword || newPassword);
+      onClose();
+    } else {
+      setErrorMsg(res.error || "Gagal me-reset kata sandi");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <section className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Reset Kata Sandi</h2>
+            <p className="text-xs text-slate-500 font-normal mt-0.5">{user.name} ({user.email})</p>
+          </div>
+          <button className="icon-button" onClick={onClose} title="Tutup" type="button">X</button>
+        </div>
+
+        {errorMsg && (
+          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs font-bold text-rose-600">
+            {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Kata Sandi Baru *</label>
+            <input
+              className="field font-mono text-slate-800"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Ketik kata sandi baru..."
+              required
+            />
+            <p className="mt-1 text-[11px] text-slate-400">Kata sandi baru akan langsung berlaku untuk login pengguna ini.</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <button className="secondary-button" onClick={onClose} type="button">Batal</button>
+            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : "Simpan Kata Sandi Baru"}
+            </button>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }
@@ -757,17 +860,41 @@ function AddUserModal({
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("password123");
   const [storeName, setStoreName] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState("Aktif");
   const [registeredDate, setRegisteredDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !email) return;
 
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
     const joinedStr = formatIndonesianDate(registeredDate);
     const umkmName = storeName.trim() || `Toko ${name.split(" ")[0]}`;
+
+    const res = await createNewOwner({
+      name,
+      email,
+      password,
+      phone,
+      status,
+      storeName
+    });
+
+    setIsSubmitting(false);
+
+    if (!res || res.error) {
+      setErrorMsg(res?.error || "Gagal membuat akun owner baru");
+      return;
+    }
+
+    const newUserId = res?.userId || crypto.randomUUID();
 
     const autoUmkm: UmkmAccount = {
       name: umkmName,
@@ -783,10 +910,11 @@ function AddUserModal({
 
     onAdd(
       {
-        id: Date.now(),
+        id: newUserId,
         name,
         email,
-        role: "UMKM Owner",
+        password: res.password || password,
+        role: "umkm",
         status,
         registered: joinedStr,
         avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
@@ -811,6 +939,13 @@ function AddUserModal({
             Profil UMKM default akan dibuat otomatis dan muncul di Kelola UMKM. Owner bisa mengeditnya sendiri setelah login.
           </p>
         </div>
+
+        {errorMsg && (
+          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs font-bold text-rose-600">
+            {errorMsg}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -837,12 +972,33 @@ function AddUserModal({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Kata Sandi (Password) *</label>
+              <input
+                className="field font-mono text-slate-800"
+                placeholder="password123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">No. Telepon / WhatsApp</label>
               <input
                 className="field font-normal text-slate-800"
                 placeholder="0812-3456-7890"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Nama Toko / Usaha</label>
+              <input
+                className="field font-normal text-slate-800"
+                placeholder="Contoh: Kedai Kopi Babatan"
+                value={storeName}
+                onChange={(e) => setStoreName(e.target.value)}
               />
             </div>
             <div>
@@ -858,18 +1014,6 @@ function AddUserModal({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Nama Toko / Usaha
-              <span className="ml-1.5 text-slate-400 font-normal">(opsional — default: "Toko [Nama]")</span>
-            </label>
-            <input
-              className="field font-normal text-slate-800"
-              placeholder="Contoh: Kedai Kopi Babatan"
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-            />
-          </div>
-          <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Terdaftar *</label>
             <input
               type="date"
@@ -881,8 +1025,8 @@ function AddUserModal({
           </div>
           <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button className="secondary-button" onClick={onClose} type="button">Batal</button>
-            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">
-              Buat Akun &amp; Profil UMKM
+            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Membuat Akun & UMKM..." : "Buat Akun & Profil UMKM"}
             </button>
           </div>
         </form>

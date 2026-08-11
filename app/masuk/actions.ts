@@ -10,7 +10,7 @@ export async function login(formData: FormData) {
   
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
@@ -19,7 +19,16 @@ export async function login(formData: FormData) {
     return { error: error.message }
   }
 
-  return { success: true }
+  let targetUrl = '/umkm';
+  if (authData.user) {
+    const { data: dbUser } = await supabase.from('users').select('role').eq('id', authData.user.id).single();
+    const isSuperAdmin = dbUser?.role === 'superadmin' || dbUser?.role === 'admin' || authData.user.email === 'super@admin.com';
+    if (isSuperAdmin) {
+      targetUrl = '/admin';
+    }
+  }
+
+  return { success: true, targetUrl }
 }
 
 export async function logout() {

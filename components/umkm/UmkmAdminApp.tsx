@@ -1,10 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-const monthlyExpense: any[] = [];
-const monthlyIncome: any[] = [];
-const summaryRows: any[] = [];
-const transactions: any[] = [];
 import { umkmNavItems } from "@/data/mock-data";
 import {
   EditIcon,
@@ -14,18 +10,80 @@ import {
   UmkmNavIcon,
 } from "@/components/icons/Icons";
 import type { UmkmView } from "@/types";
+import { updateUmkmProfile, upsertTransaction, deleteTransaction, getUploadUrl, uploadFileToR2 } from "@/app/admin/actions";
 
-export function UmkmAdminApp({ user, umkmData }: { user: any; umkmData: any }) {
+export function UmkmAdminApp({ 
+  user, 
+  umkmData,
+  initialTransactions
+}: { 
+  user: any; 
+  umkmData: any;
+  initialTransactions: any[];
+}) {
   const shopName: string = umkmData?.name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Toko Anda";
   const [activeView, setActiveView] = useState<UmkmView>("dashboard");
   const [isModalOpen, setModalOpen] = useState(false);
   const [shopLogo, setShopLogo] = useState<string | null>(umkmData?.logo_url || "/images/logo-maberuk.jpg");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [transactionsList, setTransactionsList] = useState<any[]>(initialTransactions || []);
+  const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
 
   const activeLabel = useMemo(
     () => umkmNavItems.find((item) => item.id === activeView)?.label ?? "Dashboard",
     [activeView],
   );
+
+  const monthlyIncome = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const sums = Array(12).fill(0);
+    transactionsList.forEach(t => {
+      if (t.type === 'Pemasukan') {
+        const date = new Date(t.date);
+        if (!isNaN(date.getTime())) {
+          sums[date.getMonth()] += Number(t.amount);
+        }
+      }
+    });
+    return months.map((m, i) => ({ month: m, value: sums[i] / 1000000 }));
+  }, [transactionsList]);
+
+  const monthlyExpense = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const sums = Array(12).fill(0);
+    transactionsList.forEach(t => {
+      if (t.type === 'Pengeluaran') {
+        const date = new Date(t.date);
+        if (!isNaN(date.getTime())) {
+          sums[date.getMonth()] += Number(t.amount);
+        }
+      }
+    });
+    return months.map((m, i) => ({ month: m, value: sums[i] / 1000000 }));
+  }, [transactionsList]);
+
+  const summaryRows = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const rows: any[] = [];
+    for (let i = 0; i < 12; i++) {
+      const income = transactionsList
+        .filter(t => t.type === 'Pemasukan' && new Date(t.date).getMonth() === i)
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const expense = transactionsList
+        .filter(t => t.type === 'Pengeluaran' && new Date(t.date).getMonth() === i)
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      if (income > 0 || expense > 0) {
+        rows.push([
+          months[i],
+          `Rp ${income.toLocaleString('id-ID')}`,
+          `Rp ${expense.toLocaleString('id-ID')}`,
+          `Rp ${(income - expense).toLocaleString('id-ID')}`
+        ]);
+      }
+    }
+    return rows;
+  }, [transactionsList]);
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] text-slate-950">
@@ -239,18 +297,53 @@ export function UmkmAdminApp({ user, umkmData }: { user: any; umkmData: any }) {
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 md:px-8 overflow-x-hidden">
           <div key={activeView} className="view-transition">
             {activeView === "dashboard" && (
-              <DashboardView setActiveView={setActiveView} setModalOpen={setModalOpen} />
+              <DashboardView 
+                setActiveView={setActiveView} 
+                setModalOpen={setModalOpen} 
+                transactionsList={transactionsList}
+                monthlyIncome={monthlyIncome}
+              />
             )}
-            {activeView === "bookkeeping" && <BookkeepingView />}
-            {activeView === "reports" && <ReportsView />}
+            {activeView === "bookkeeping" && (
+              <BookkeepingView 
+                transactionsList={transactionsList} 
+                setTransactionsList={setTransactionsList}
+                setEditingTransaction={setEditingTransaction}
+                setModalOpen={setModalOpen}
+              />
+            )}
+            {activeView === "reports" && (
+              <ReportsView 
+                transactionsList={transactionsList}
+                monthlyIncome={monthlyIncome}
+                monthlyExpense={monthlyExpense}
+                summaryRows={summaryRows}
+              />
+            )}
             {activeView === "profile" && (
-              <ProfileView shopLogo={shopLogo} setShopLogo={setShopLogo} />
+              <ProfileView 
+                umkmData={umkmData}
+                shopLogo={shopLogo} 
+                setShopLogo={setShopLogo} 
+              />
             )}
           </div>
         </main>
       </div>
 
-      {isModalOpen && <TransactionModal onClose={() => setModalOpen(false)} />}
+      {isModalOpen && (
+        <TransactionModal 
+          umkmData={umkmData}
+          editingTransaction={editingTransaction}
+          setEditingTransaction={setEditingTransaction}
+          transactionsList={transactionsList}
+          setTransactionsList={setTransactionsList}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingTransaction(null);
+          }} 
+        />
+      )}
       <span className="sr-only">Halaman aktif: {activeLabel}</span>
     </div>
   );
@@ -307,15 +400,41 @@ function MetricCard({
 function DashboardView({
   setActiveView,
   setModalOpen,
+  transactionsList,
+  monthlyIncome,
 }: {
   setActiveView: (view: UmkmView) => void;
   setModalOpen: (open: boolean) => void;
+  transactionsList: any[];
+  monthlyIncome: any[];
 }) {
+  const totalIncome = useMemo(() => {
+    return transactionsList
+      .filter(t => t.type === 'Pemasukan')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactionsList]);
+
+  const totalExpense = useMemo(() => {
+    return transactionsList
+      .filter(t => t.type === 'Pengeluaran')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactionsList]);
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard label="Pemasukan" value="Rp 0" trend="Belum ada transaksi" tone="green" />
-        <MetricCard label="Pengeluaran" value="Rp 0" trend="Belum ada transaksi" tone="red" />
+        <MetricCard 
+          label="Pemasukan" 
+          value={`Rp ${totalIncome.toLocaleString('id-ID')}`} 
+          trend={transactionsList.length > 0 ? "Total pemasukan riil" : "Belum ada transaksi"} 
+          tone="green" 
+        />
+        <MetricCard 
+          label="Pengeluaran" 
+          value={`Rp ${totalExpense.toLocaleString('id-ID')}`} 
+          trend={transactionsList.length > 0 ? "Total pengeluaran riil" : "Belum ada transaksi"} 
+          tone="red" 
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -366,26 +485,67 @@ function DashboardView({
         <div className="section-title px-5 pt-5">
           <h2>Transaksi Terakhir</h2>
         </div>
-        <TransactionList compact />
+        <TransactionList compact transactionsList={transactionsList} />
       </section>
     </div>
   );
 }
 
-function BookkeepingView() {
+function BookkeepingView({
+  transactionsList,
+  setTransactionsList,
+  setEditingTransaction,
+  setModalOpen,
+}: {
+  transactionsList: any[];
+  setTransactionsList: React.Dispatch<React.SetStateAction<any[]>>;
+  setEditingTransaction: React.Dispatch<React.SetStateAction<any | null>>;
+  setModalOpen: (open: boolean) => void;
+}) {
   const [typeFilter, setTypeFilter] = useState<"Semua" | "Pemasukan" | "Pengeluaran">("Semua");
   const [categoryFilter, setCategoryFilter] = useState("Semua");
-  const filteredTransactions = transactions.filter(
-    (transaction) =>
-      (typeFilter === "Semua" || transaction.type === typeFilter) &&
-      (categoryFilter === "Semua" || transaction.category === categoryFilter),
-  );
+
+  const filteredTransactions = useMemo(() => {
+    return transactionsList.filter(
+      (transaction) =>
+        (typeFilter === "Semua" || transaction.type === typeFilter) &&
+        (categoryFilter === "Semua" || transaction.category === categoryFilter),
+    );
+  }, [transactionsList, typeFilter, categoryFilter]);
+
+  const totalIncome = useMemo(() => {
+    return transactionsList
+      .filter(t => t.type === 'Pemasukan')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactionsList]);
+
+  const totalExpense = useMemo(() => {
+    return transactionsList
+      .filter(t => t.type === 'Pengeluaran')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactionsList]);
+
+  async function handleDeleteTransaction(id: string) {
+    if (confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
+      const res = await deleteTransaction(id);
+      if (res.success) {
+        setTransactionsList(prev => prev.filter(t => t.id !== id));
+      } else {
+        console.error("Gagal menghapus transaksi: " + res.error);
+      }
+    }
+  }
+
+  function handleEditTransaction(transaction: any) {
+    setEditingTransaction(transaction);
+    setModalOpen(true);
+  }
 
   return (
     <div className="space-y-5">
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard label="Pemasukan" value="Rp 8.750.000" trend="+8.1% bulan ini" tone="green" />
-        <MetricCard label="Pengeluaran" value="Rp 3.200.000" trend="-5.1% bulan ini" tone="red" />
+        <MetricCard label="Pemasukan" value={`Rp ${totalIncome.toLocaleString('id-ID')}`} trend="Total kas masuk" tone="green" />
+        <MetricCard label="Pengeluaran" value={`Rp ${totalExpense.toLocaleString('id-ID')}`} trend="Total kas keluar" tone="red" />
       </div>
       <section className="panel p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
@@ -407,22 +567,52 @@ function BookkeepingView() {
             value={categoryFilter}
           >
             <option>Semua</option>
+            <option>Makanan</option>
+            <option>Katering</option>
             <option>Penjualan</option>
-            <option>Operasional</option>
             <option>Bahan Baku</option>
+            <option>Operasional</option>
+            <option>Kemasan</option>
           </select>
         </div>
       </section>
       <section className="panel overflow-hidden">
-        <TransactionTable filteredTransactions={filteredTransactions} />
+        <TransactionTable 
+          filteredTransactions={filteredTransactions} 
+          totalTransactions={transactionsList.length}
+          onDelete={handleDeleteTransaction}
+          onEdit={handleEditTransaction}
+        />
       </section>
     </div>
   );
 }
 
-function ReportsView() {
+function ReportsView({
+  transactionsList,
+  monthlyIncome,
+  monthlyExpense,
+  summaryRows,
+}: {
+  transactionsList: any[];
+  monthlyIncome: any[];
+  monthlyExpense: any[];
+  summaryRows: any[][];
+}) {
   const [reportPeriod, setReportPeriod] = useState("6 Bulan");
   const reportPeriods = ["7 Hari", "30 Hari", "6 Bulan", "1 Tahun"];
+
+  const overallIncome = useMemo(() => {
+    return transactionsList
+      .filter(t => t.type === 'Pemasukan')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactionsList]);
+
+  const overallExpense = useMemo(() => {
+    return transactionsList
+      .filter(t => t.type === 'Pengeluaran')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactionsList]);
 
   return (
     <div className="space-y-5">
@@ -474,10 +664,10 @@ function ReportsView() {
             </tr>
           </thead>
           <tbody>
-            {summaryRows.map((row) => (
-              <tr key={row[0]}>
+            {summaryRows.map((row, rowIndex) => (
+              <tr key={`${row[0]}-${rowIndex}`}>
                 {row.map((cell, index) => (
-                  <td key={cell} className={index === 3 ? "text-emerald-600 font-bold" : ""}>
+                  <td key={`${index}-${cell}`} className={index === 3 ? "text-emerald-600 font-bold" : ""}>
                     {cell}
                   </td>
                 ))}
@@ -485,9 +675,9 @@ function ReportsView() {
             ))}
             <tr className="bg-emerald-50 font-extrabold">
               <td>Total Keseluruhan</td>
-              <td className="text-emerald-600">Rp 53.700.000</td>
-              <td>Rp 19.500.000</td>
-              <td className="text-emerald-600">Rp 34.200.000</td>
+              <td className="text-emerald-600">Rp {overallIncome.toLocaleString('id-ID')}</td>
+              <td>Rp {overallExpense.toLocaleString('id-ID')}</td>
+              <td className="text-emerald-600">Rp {(overallIncome - overallExpense).toLocaleString('id-ID')}</td>
             </tr>
           </tbody>
         </table>
@@ -590,34 +780,96 @@ function parseMapInput(query: string, fallbackAddress: string): {
 }
 
 function ProfileView({
+  umkmData,
   shopLogo,
   setShopLogo,
 }: {
+  umkmData: any;
   shopLogo: string | null;
   setShopLogo: (logo: string | null) => void;
 }) {
-  const [waNumber, setWaNumber] = useState("081234567890");
-  const [igAccount, setIgAccount] = useState("@sarirasa_babatan");
-  const [fbPage, setFbPage] = useState("Toko Sari Rasa Babatan");
-  const [tiktokAccount, setTiktokAccount] = useState("@sarirasa.kitchen");
-  const [shopAddress, setShopAddress] = useState("");
-  const [mapQuery, setMapQuery] = useState("");
+  const [name, setName] = useState(umkmData?.name || "");
+  const [owner, setOwner] = useState(umkmData?.owner || "");
+  const [waNumber, setWaNumber] = useState(umkmData?.phone || "");
+  const [description, setDescription] = useState(umkmData?.description || "");
+  const [shopAddress, setShopAddress] = useState(umkmData?.address || "");
+  const [mapQuery, setMapQuery] = useState(umkmData?.gps_coords || umkmData?.address || "");
+  
+  const [igAccount, setIgAccount] = useState(umkmData?.social?.instagram || "");
+  const [fbPage, setFbPage] = useState(umkmData?.social?.facebook || "");
+  const [tiktokAccount, setTiktokAccount] = useState(umkmData?.social?.tiktok || "");
+
+  const [weekdaysStart, setWeekdaysStart] = useState(umkmData?.operational_hours?.weekdaysStart || "08:00");
+  const [weekdaysEnd, setWeekdaysEnd] = useState(umkmData?.operational_hours?.weekdaysEnd || "21:00");
+  const [weekendsStart, setWeekendsStart] = useState(umkmData?.operational_hours?.weekendsStart || "09:00");
+  const [weekendsEnd, setWeekendsEnd] = useState(umkmData?.operational_hours?.weekendsEnd || "22:00");
+
   const [isLocating, setIsLocating] = useState(false);
-  const [gpsCoords, setGpsCoords] = useState<string | null>(null);
+  const [gpsCoords, setGpsCoords] = useState<string | null>(umkmData?.gps_coords || null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+
+  const [galleryList, setGalleryList] = useState<any[]>(
+    Array.isArray(umkmData?.gallery) ? umkmData.gallery : []
+  );
 
   const mapResult = parseMapInput(mapQuery, shopAddress);
 
-  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        if (evt.target?.result) {
-          setShopLogo(evt.target.result as string);
+    if (file && umkmData?.id) {
+      setIsUploading(true);
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', `logos/${umkmData.id}`);
+
+        const res = await uploadFileToR2(formData);
+        
+        if (res.success && res.publicUrl) {
+          setShopLogo(res.publicUrl);
+          await updateUmkmProfile(umkmData.id, { logo_url: res.publicUrl, hero_image: res.publicUrl });
+        } else if (res.error) {
+          console.error("Gagal mengupload logo ke R2: " + res.error);
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("Terjadi kesalahan saat mengupload logo:", err);
+      } finally {
+        setIsUploading(false);
+      }
     }
+  }
+
+  async function handleGalleryUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file && umkmData?.id) {
+      setIsUploadingGallery(true);
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', `gallery/${umkmData.id}`);
+
+        const res = await uploadFileToR2(formData);
+        
+        if (res.success && res.publicUrl) {
+          const newPhoto = { src: res.publicUrl, caption: file.name.split('.')[0] || 'Foto Produk' };
+          setGalleryList(prev => [...prev, newPhoto]);
+        } else if (res.error) {
+          console.error("Gagal mengupload foto ke R2: " + res.error);
+        }
+      } catch (err) {
+        console.error("Terjadi kesalahan saat mengupload foto:", err);
+      } finally {
+        setIsUploadingGallery(false);
+      }
+    }
+  }
+
+  function handleRemovePhoto(index: number) {
+    setGalleryList(prev => prev.filter((_, i) => i !== index));
   }
 
   function handleShareLocation() {
@@ -643,6 +895,45 @@ function ProfileView({
     }
   }
 
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  async function handleSave() {
+    setSaveStatus(null);
+    if (!name.trim()) {
+      setSaveStatus({ type: 'error', text: "Nama toko wajib diisi!" });
+      return;
+    }
+    setIsSaving(true);
+    const res = await updateUmkmProfile(umkmData.id, {
+      name,
+      owner,
+      phone: waNumber,
+      phone_digits: waNumber.replace(/\D/g, ''),
+      description,
+      address: shopAddress,
+      social: {
+        instagram: igAccount,
+        facebook: fbPage,
+        tiktok: tiktokAccount
+      },
+      operational_hours: {
+        weekdaysStart,
+        weekdaysEnd,
+        weekendsStart,
+        weekendsEnd
+      },
+      gps_coords: gpsCoords || mapQuery,
+      gallery: galleryList
+    });
+    setIsSaving(false);
+    if (res.success) {
+      setSaveStatus({ type: 'success', text: "Profil berhasil disimpan!" });
+      setTimeout(() => setSaveStatus(null), 4000);
+    } else {
+      setSaveStatus({ type: 'error', text: "Gagal menyimpan profil: " + (res.error || "") });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="panel flex flex-col gap-5 p-6 sm:flex-row sm:items-center justify-between">
@@ -653,12 +944,13 @@ function ProfileView({
               accept="image/*"
               className="hidden"
               onChange={handleLogoChange}
+              disabled={isUploading}
             />
             {shopLogo ? (
               <>
                 <img src={shopLogo} alt="Logo Toko" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold text-center p-1">
-                  Ganti Logo
+                  {isUploading ? "Mengunggah..." : "Ganti Logo"}
                 </div>
               </>
             ) : (
@@ -680,7 +972,7 @@ function ProfileView({
           <div>
             <h2 className="text-base font-bold text-slate-900">Logo Utama Toko</h2>
             <p className="mt-1 text-sm text-slate-500 font-normal">
-              Klik gambar logo di sebelah kiri untuk mengunggah atau mengganti logo toko.
+              {isUploading ? "Sedang mengunggah logo ke R2..." : "Klik gambar logo di sebelah kiri untuk mengunggah atau mengganti logo toko."}
             </p>
           </div>
         </div>
@@ -695,14 +987,22 @@ function ProfileView({
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Nama Toko / Usaha
                 </label>
-                <input className="field font-normal text-slate-800" defaultValue="Toko Sari Rasa Babatan" />
+                <input 
+                  className="field font-normal text-slate-800" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Nama Pemilik
                 </label>
-                <input className="field font-normal text-slate-800" defaultValue="Ibu Endang Sri Lestari" />
+                <input 
+                  className="field font-normal text-slate-800" 
+                  value={owner} 
+                  onChange={(e) => setOwner(e.target.value)} 
+                />
               </div>
 
               <div>
@@ -735,8 +1035,9 @@ function ProfileView({
                   Tentang Toko / Deskripsi Singkat
                 </label>
                 <textarea
-                  className="field min-h-24 py-2.5 resize-y"
-                  defaultValue="Menyediakan aneka jajanan pasar tradisional, katering nasi kotak harian, dan aneka sambal botolan legendaris dengan resep turun-temurun asli Babatan."
+                  className="field min-h-24 py-2.5 resize-y text-slate-800 font-normal"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
             </div>
@@ -878,77 +1179,48 @@ function ProfileView({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                <img
-                  src="/images/product-jajanan.png"
-                  alt="Jajanan Pasar"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                  Jajanan Pasar
-                </span>
-                <button
-                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Hapus foto"
-                  type="button"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+              {galleryList.map((photo, index) => (
+                <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm" key={index}>
+                  <img
+                    src={photo.src}
+                    alt={photo.caption || "Foto Produk"}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
+                    {photo.caption || "Foto Produk"}
+                  </span>
+                  <button
+                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Hapus foto"
+                    onClick={() => handleRemovePhoto(index)}
+                    type="button"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
 
-              <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                <img
-                  src="/images/product-nasikotak.png"
-                  alt="Nasi Kotak"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                  Nasi Kotak
-                </span>
-                <button
-                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Hapus foto"
-                  type="button"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-sm">
-                <img
-                  src="/images/product-sambal.png"
-                  alt="Sambal Botol"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <span className="absolute bottom-1.5 left-1.5 right-1.5 bg-slate-950/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm truncate text-center">
-                  Sambal Botol
-                </span>
-                <button
-                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Hapus foto"
-                  type="button"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <button
+              <label
                 className="aspect-square rounded-lg border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/40 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-emerald-600 group"
-                type="button"
               >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleGalleryUpload}
+                  disabled={isUploadingGallery}
+                />
                 <div className="h-8 w-8 rounded-full bg-slate-200/70 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
                   <svg className="h-4 w-4 text-slate-500 group-hover:text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
-                <span className="text-[11px] font-bold text-slate-600 group-hover:text-emerald-600">Tambah Foto</span>
-              </button>
+                <span className="text-[11px] font-bold text-slate-600 group-hover:text-emerald-600">
+                  {isUploadingGallery ? "Mengunggah..." : "Tambah Foto"}
+                </span>
+              </label>
             </div>
           </section>
         </div>
@@ -957,8 +1229,8 @@ function ProfileView({
           <section className="panel p-6">
             <h2 className="mb-5 text-base font-bold text-slate-900">Jam Operasional Toko</h2>
             <div className="space-y-4">
-              <TimeRow label="Senin - Jumat" start="08:00" end="21:00" />
-              <TimeRow label="Sabtu - Minggu" start="09:00" end="22:00" />
+              <TimeRow label="Senin - Jumat" start={weekdaysStart} end={weekdaysEnd} onChangeStart={setWeekdaysStart} onChangeEnd={setWeekdaysEnd} />
+              <TimeRow label="Sabtu - Minggu" start={weekendsStart} end={weekendsEnd} onChangeStart={setWeekendsStart} onChangeEnd={setWeekendsEnd} />
             </div>
           </section>
 
@@ -1038,25 +1310,57 @@ function ProfileView({
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-5 border-t border-slate-200/80">
-        <p className="text-xs text-slate-400 font-medium">
-          Pastikan data yang Anda isi sudah benar untuk menjaga kredibilitas UMKM
-        </p>
-        <button className="primary-button shrink-0 px-6 bg-[#10b981] hover:bg-[#059669]" type="button">
-          Simpan Perubahan Profil
+        <div>
+          <p className="text-xs text-slate-400 font-medium">
+            Pastikan data yang Anda isi sudah benar untuk menjaga kredibilitas UMKM
+          </p>
+          {saveStatus && (
+            <p className={`mt-1.5 text-xs font-bold ${saveStatus.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {saveStatus.text}
+            </p>
+          )}
+        </div>
+        <button 
+          className="primary-button shrink-0 px-6 bg-[#10b981] hover:bg-[#059669] disabled:opacity-50" 
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? "Menyimpan..." : "Simpan Perubahan Profil"}
         </button>
       </div>
     </div>
   );
 }
 
-function TimeRow({ label, start, end }: { label: string; start: string; end: string }) {
+function TimeRow({ 
+  label, 
+  start, 
+  end,
+  onChangeStart,
+  onChangeEnd
+}: { 
+  label: string; 
+  start: string; 
+  end: string;
+  onChangeStart: (val: string) => void;
+  onChangeEnd: (val: string) => void;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="font-semibold text-slate-700 text-xs sm:text-sm">{label}</span>
       <div className="flex items-center gap-2">
-        <input className="field w-20 text-center text-xs py-1.5 px-2 font-medium" defaultValue={start} />
+        <input 
+          className="field w-20 text-center text-xs py-1.5 px-2 font-medium" 
+          value={start} 
+          onChange={(e) => onChangeStart(e.target.value)}
+        />
         <span className="text-xs text-slate-400 font-medium">s/d</span>
-        <input className="field w-20 text-center text-xs py-1.5 px-2 font-medium" defaultValue={end} />
+        <input 
+          className="field w-20 text-center text-xs py-1.5 px-2 font-medium" 
+          value={end} 
+          onChange={(e) => onChangeEnd(e.target.value)}
+        />
       </div>
     </div>
   );
@@ -1082,32 +1386,49 @@ function BarChart({ data, tone }: { data: Array<{ month: string; value: number }
   );
 }
 
-function TransactionList({ compact = false }: { compact?: boolean }) {
+function TransactionList({ 
+  compact = false,
+  transactionsList 
+}: { 
+  compact?: boolean;
+  transactionsList: any[];
+}) {
   return (
     <div className="divide-y divide-slate-100">
-      {transactions.slice(0, compact ? 5 : transactions.length).map((transaction) => (
-        <div className="grid gap-3 px-5 py-4 text-sm md:grid-cols-[110px_90px_1fr_120px]" key={`${transaction.date}-${transaction.note}`}>
+      {transactionsList.slice(0, compact ? 5 : transactionsList.length).map((transaction) => (
+        <div className="grid gap-3 px-5 py-4 text-sm md:grid-cols-[110px_90px_1fr_120px]" key={transaction.id}>
           <span className="text-slate-500">{transaction.date}</span>
           <span className={`pill ${transaction.type === "Pemasukan" ? "pill-green" : "pill-red"}`}>
             {transaction.type === "Pemasukan" ? "Masuk" : "Keluar"}
           </span>
           <span className="truncate font-semibold text-slate-700">{transaction.note}</span>
           <span className={`text-right font-extrabold ${transaction.type === "Pemasukan" ? "text-emerald-600" : "text-red-500"}`}>
-            {transaction.amount}
+            Rp {Number(transaction.amount).toLocaleString('id-ID')}
           </span>
         </div>
       ))}
+      {transactionsList.length === 0 && <EmptyState text="Belum ada transaksi pencatatan kas." />}
     </div>
   );
 }
 
-function TransactionTable({ filteredTransactions }: { filteredTransactions: typeof transactions }) {
+function TransactionTable({ 
+  filteredTransactions,
+  totalTransactions,
+  onDelete,
+  onEdit
+}: { 
+  filteredTransactions: any[];
+  totalTransactions: number;
+  onDelete: (id: string) => void;
+  onEdit: (transaction: any) => void;
+}) {
   return (
     <div>
       {/* Mobile Card List View (< md) */}
       <div className="divide-y divide-slate-100 md:hidden">
         {filteredTransactions.map((transaction) => (
-          <div className="p-4 space-y-2.5" key={`${transaction.date}-${transaction.note}`}>
+          <div className="p-4 space-y-2.5" key={transaction.id}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">{transaction.date}</span>
               <span className={`pill ${transaction.type === "Pemasukan" ? "pill-green" : "pill-red"}`}>
@@ -1122,7 +1443,7 @@ function TransactionTable({ filteredTransactions }: { filteredTransactions: type
                 </span>
               </div>
               <p className={`text-base font-extrabold shrink-0 ${transaction.type === "Pemasukan" ? "text-emerald-600" : "text-red-500"}`}>
-                {transaction.amount}
+                Rp {Number(transaction.amount).toLocaleString('id-ID')}
               </p>
             </div>
             <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
@@ -1130,10 +1451,10 @@ function TransactionTable({ filteredTransactions }: { filteredTransactions: type
                 {transaction.status}
               </span>
               <div className="flex gap-2">
-                <button className="icon-button" title="Edit transaksi" type="button">
+                <button className="icon-button" title="Edit transaksi" onClick={() => onEdit(transaction)} type="button">
                   <EditIcon />
                 </button>
-                <button className="icon-button danger" title="Hapus transaksi" type="button">
+                <button className="icon-button danger" title="Hapus transaksi" onClick={() => onDelete(transaction.id)} type="button">
                   <TrashIcon />
                 </button>
               </div>
@@ -1158,7 +1479,7 @@ function TransactionTable({ filteredTransactions }: { filteredTransactions: type
           </thead>
           <tbody>
             {filteredTransactions.map((transaction) => (
-              <tr key={`${transaction.date}-${transaction.note}`}>
+              <tr key={transaction.id}>
                 <td>{transaction.date}</td>
                 <td>
                   <span className={`pill ${transaction.type === "Pemasukan" ? "pill-green" : "pill-red"}`}>
@@ -1168,7 +1489,7 @@ function TransactionTable({ filteredTransactions }: { filteredTransactions: type
                 <td>{transaction.category}</td>
                 <td className="font-semibold text-slate-700">{transaction.note}</td>
                 <td className={transaction.type === "Pemasukan" ? "font-bold text-emerald-600" : "font-bold text-red-500"}>
-                  {transaction.amount}
+                  Rp {Number(transaction.amount).toLocaleString('id-ID')}
                 </td>
                 <td>
                   <span className={`pill ${transaction.status === "Selesai" ? "pill-green" : "pill-yellow"}`}>
@@ -1177,10 +1498,10 @@ function TransactionTable({ filteredTransactions }: { filteredTransactions: type
                 </td>
                 <td>
                   <div className="flex gap-2">
-                    <button className="icon-button" title="Edit transaksi" type="button">
+                    <button className="icon-button" title="Edit transaksi" onClick={() => onEdit(transaction)} type="button">
                       <EditIcon />
                     </button>
-                    <button className="icon-button danger" title="Hapus transaksi" type="button">
+                    <button className="icon-button danger" title="Hapus transaksi" onClick={() => onDelete(transaction.id)} type="button">
                       <TrashIcon />
                     </button>
                   </div>
@@ -1194,40 +1515,119 @@ function TransactionTable({ filteredTransactions }: { filteredTransactions: type
       {filteredTransactions.length === 0 && <EmptyState text="Transaksi tidak ditemukan." />}
       <div className="flex flex-col gap-3 px-5 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100">
         <span>
-          Menampilkan {filteredTransactions.length} dari {transactions.length} transaksi
+          Menampilkan {filteredTransactions.length} dari {totalTransactions} transaksi
         </span>
         <div className="flex gap-2">
           <button className="page-button" type="button">Sebelumnya</button>
           <button className="page-button active" type="button">1</button>
-          <button className="page-button" type="button">2</button>
-          <button className="page-button" type="button">3</button>
-          <button className="page-button" type="button">Selanjutnya</button>
+          <button className="page-button animate-pulse" type="button">Selanjutnya</button>
         </div>
       </div>
     </div>
   );
 }
 
-function TransactionModal({ onClose }: { onClose: () => void }) {
-  const [transactionType, setTransactionType] = useState<"Pemasukan" | "Pengeluaran">("Pemasukan");
-  const [category, setCategory] = useState("Makanan");
+function TransactionModal({ 
+  onClose,
+  umkmData,
+  editingTransaction,
+  setEditingTransaction,
+  transactionsList,
+  setTransactionsList
+}: { 
+  onClose: () => void;
+  umkmData: any;
+  editingTransaction: any | null;
+  setEditingTransaction: React.Dispatch<React.SetStateAction<any | null>>;
+  transactionsList: any[];
+  setTransactionsList: React.Dispatch<React.SetStateAction<any[]>>;
+}) {
+  const [transactionType, setTransactionType] = useState<"Pemasukan" | "Pengeluaran">(
+    editingTransaction?.type || "Pemasukan"
+  );
+  const [transactionDate, setTransactionDate] = useState(
+    editingTransaction?.date || new Date().toISOString().split("T")[0]
+  );
+  const [category, setCategory] = useState(
+    editingTransaction?.category || (editingTransaction?.type === "Pengeluaran" ? "Bahan Baku" : "Makanan")
+  );
+  const [amount, setAmount] = useState(
+    editingTransaction?.amount ? String(editingTransaction.amount) : ""
+  );
+  const [note, setNote] = useState(
+    editingTransaction?.note || ""
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
   const isExpense = transactionType === "Pengeluaran";
-  const categories = isExpense ? ["Bahan Baku", "Operasional", "Kemasan"] : ["Makanan", "Katering", "Penjualan"];
+  const categories = isExpense 
+    ? ["Bahan Baku", "Operasional", "Kemasan"] 
+    : ["Makanan", "Katering", "Penjualan"];
 
   function handleTransactionTypeChange(nextType: "Pemasukan" | "Pengeluaran") {
     setTransactionType(nextType);
     setCategory(nextType === "Pengeluaran" ? "Bahan Baku" : "Makanan");
   }
 
+  const [formError, setFormError] = useState<string | null>(null);
+
+  async function handleSave() {
+    setFormError(null);
+    if (!amount || Number(amount.replace(/\D/g, '')) <= 0) {
+      setFormError("Jumlah transaksi wajib diisi dan harus lebih besar dari 0!");
+      return;
+    }
+    if (!note.trim()) {
+      setFormError("Keterangan transaksi wajib diisi!");
+      return;
+    }
+
+    setIsSaving(true);
+
+    const numericAmount = Number(amount.replace(/\D/g, ''));
+    const transactionObj = {
+      id: editingTransaction?.id || undefined, // Let Supabase auto-generate if new
+      umkm_id: umkmData.id,
+      type: transactionType,
+      date: transactionDate,
+      category: category,
+      amount: numericAmount,
+      note: note,
+      status: 'Selesai'
+    };
+
+    const res = await upsertTransaction(transactionObj);
+    setIsSaving(false);
+
+    if (res.success) {
+      if (editingTransaction?.id) {
+        setTransactionsList(prev => prev.map(t => t.id === editingTransaction.id ? { ...t, ...transactionObj } : t));
+      } else {
+        setTransactionsList(prev => [{ ...transactionObj, id: crypto.randomUUID() }, ...prev]);
+      }
+      onClose();
+    } else {
+      setFormError("Gagal menyimpan transaksi: " + (res.error || ""));
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
       <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900">Tambah Transaksi Baru</h2>
+          <h2 className="text-base font-bold text-slate-900">
+            {editingTransaction?.id ? "Edit Detail Transaksi" : "Tambah Transaksi Baru"}
+          </h2>
           <button className="icon-button" onClick={onClose} title="Tutup modal" type="button">
             X
           </button>
         </div>
+
+        {formError && (
+          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs font-bold text-rose-600">
+            {formError}
+          </div>
+        )}
         <div className="form-grid">
           <label className="text-xs font-semibold text-slate-700">
             Tipe Transaksi
@@ -1250,7 +1650,12 @@ function TransactionModal({ onClose }: { onClose: () => void }) {
           </label>
           <label className="text-xs font-semibold text-slate-700">
             Tanggal Transaksi
-            <input className="field font-normal text-slate-800" defaultValue="2026-01-20" type="date" />
+            <input 
+              className="field font-normal text-slate-800" 
+              value={transactionDate} 
+              onChange={(e) => setTransactionDate(e.target.value)}
+              type="date" 
+            />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-slate-700">
@@ -1263,21 +1668,34 @@ function TransactionModal({ onClose }: { onClose: () => void }) {
             </label>
             <label className="text-xs font-semibold text-slate-700">
               Jumlah (Rp)
-              <input className="field font-normal text-slate-800" defaultValue={isExpense ? "Rp 150.000" : "Rp 300.000"} key={transactionType} />
+              <input 
+                className="field font-normal text-slate-800" 
+                placeholder={isExpense ? "150000" : "300000"} 
+                value={amount}
+                onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+              />
             </label>
           </div>
           <label className="text-xs font-semibold text-slate-700">
             Keterangan
             <textarea
-              className="field min-h-24 font-normal text-slate-800"
-              defaultValue={isExpense ? "Beli minyak goreng kemasan dan bumbu dapur" : "Penjualan Kripik Tempe Mang Oyo 20 pcs"}
-              key={`${transactionType}-note`}
+              className="field min-h-24 font-normal text-slate-800 resize-y"
+              placeholder={isExpense ? "Beli minyak goreng kemasan dan bumbu dapur" : "Penjualan Kripik Tempe Mang Oyo 20 pcs"}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
             />
           </label>
         </div>
         <div className="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-4">
           <button className="secondary-button" onClick={onClose} type="button">Batal</button>
-          <button className="primary-button bg-[#10b981] hover:bg-[#059669]" onClick={onClose} type="button">Simpan Transaksi</button>
+          <button 
+            className="primary-button bg-[#10b981] hover:bg-[#059669] disabled:opacity-50" 
+            onClick={handleSave} 
+            disabled={isSaving}
+            type="button"
+          >
+            {isSaving ? "Menyimpan..." : "Simpan Transaksi"}
+          </button>
         </div>
       </section>
     </div>

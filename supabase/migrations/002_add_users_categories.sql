@@ -6,6 +6,7 @@ create table users (
   name text not null,
   role text default 'umkm',
   status text default 'Aktif',
+  password text,
   avatar text,
   created_at timestamptz default now()
 );
