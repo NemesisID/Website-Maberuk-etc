@@ -927,7 +927,7 @@ function AddUserModal({
       {
         id: newUserId,
         name,
-        username,
+        email: username,
         password: res.password || password,
         role: "umkm",
         status,

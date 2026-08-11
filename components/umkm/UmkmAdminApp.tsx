@@ -738,11 +738,13 @@ function parseMapInput(query: string, fallbackAddress: string): {
 }
 
 function ProfileView({
+  user,
   umkmData,
   shopLogo,
   setShopLogo,
   categories = []
 }: {
+  user: any;
   umkmData: any;
   shopLogo: string | null;
   setShopLogo: (logo: string | null) => void;
