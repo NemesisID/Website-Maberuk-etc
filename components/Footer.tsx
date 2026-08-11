@@ -64,7 +64,6 @@ export default function Footer() {
             <ul className="flex flex-col gap-2.5">
               <li className="text-sm text-gray-400">Email: info@umkmbabatan.id</li>
               <li className="text-sm text-gray-400">WhatsApp: +62 812-3456-7890</li>
-              <li className="text-sm text-gray-400">Kantor Kelurahan Babatan, Lantai 2</li>
             </ul>
           </div>
           <div>
@@ -78,7 +77,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-gray-500">© 2026 UMKM Babatan. Semua Hak Dilindungi Undang-Undang.</p>
+          <p className="text-xs text-gray-500">© 2026 Kelompok 26 KKN UPN "Veteran" Jawa Timur. Semua Hak Dilindungi Undang-Undang.</p>
         </div>
       </div>
     </footer>

@@ -1,14 +1,8 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
-
-
-const defaultAboutData = {
+import { createClient } from '@/lib/supabase/server';const defaultAboutData = {
   title: "MABERUK",
   subtitle: "Maju Bersama UMK Kelurahan Babatan",
   sectionTitle: "Tentang Maberuk",
@@ -23,20 +17,10 @@ const defaultAboutData = {
   whatsapp: "081234567890",
 };
 
-export default function AboutPage() {
-  const [data, setData] = useState(defaultAboutData);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("maberuk_about_content");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setData((prev) => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error("Failed to parse about content", e);
-      }
-    }
-  }, []);
+export default async function AboutPage() {
+  const supabase = await createClient();
+  const { data: dbAbout } = await supabase.from('site_content').select('value').eq('key', 'about_page').single();
+  const data = dbAbout?.value || defaultAboutData;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fafcfb] text-slate-900 font-sans selection:bg-green-500 selection:text-white">

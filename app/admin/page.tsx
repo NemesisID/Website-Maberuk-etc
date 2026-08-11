@@ -10,10 +10,17 @@ export default async function AdminPage() {
     redirect("/masuk");
   }
 
-  // Fetch real data
+  const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single();
+
+  if (!dbUser || dbUser.role !== 'superadmin') {
+    redirect("/umkm");
+  }
+
   const { data: umkmList } = await supabase.from('umkm').select('*').order('created_at', { ascending: false });
   const { data: promptsList } = await supabase.from('prompts').select('*').order('sort_order', { ascending: true });
   const { data: contentList } = await supabase.from('site_content').select('*');
+  const { data: usersList } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+  const { data: categoriesList } = await supabase.from('categories').select('*').order('id', { ascending: true });
 
   return (
     <SuperAdminApp 
@@ -21,6 +28,8 @@ export default async function AdminPage() {
       initialUmkmList={umkmList || []}
       initialPromptsList={promptsList || []}
       initialContentList={contentList || []}
+      initialUsersList={usersList || []}
+      initialCategoriesList={categoriesList || []}
     />
   );
 }

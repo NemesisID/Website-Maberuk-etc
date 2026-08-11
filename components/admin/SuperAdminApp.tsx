@@ -1,7 +1,6 @@
 "use client";
 
 import { type DragEvent, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   defaultHomeData,
   defaultPromptsData,
@@ -20,22 +19,26 @@ import {
   TrashIcon,
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
+import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory } from "@/app/admin/actions";
 
 export function SuperAdminApp({ 
   user, 
   initialUmkmList, 
   initialPromptsList, 
-  initialContentList 
+  initialContentList,
+  initialUsersList,
+  initialCategoriesList
 }: { 
   user: any;
   initialUmkmList: any[];
   initialPromptsList: any[];
   initialContentList: any[];
+  initialUsersList: any[];
+  initialCategoriesList: any[];
 }) {
-  const router = useRouter();
   const [activeView, setActiveView] = useState<SuperView>("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [sharedUmkmList, setSharedUmkmList] = useState<any[]>(initialUmkmList.length > 0 ? initialUmkmList : umkmAccounts);
+  const [sharedUmkmList, setSharedUmkmList] = useState<any[]>(initialUmkmList);
 
   const activeLabel = useMemo(
     () => superNavItems.find((item) => item.id === activeView)?.label ?? "Dashboard",
@@ -61,14 +64,15 @@ export function SuperAdminApp({
           ))}
         </nav>
         <div className="px-6 pb-5 pt-4 border-t border-white/10">
-          <button
-            className="super-logout-button"
-            onClick={() => router.push("/umkm")}
-            type="button"
-          >
-            <LogoutIcon />
-            <span>Keluar</span>
-          </button>
+          <form action="/api/auth/logout" method="POST">
+            <button
+              className="super-logout-button"
+              type="submit"
+            >
+              <LogoutIcon />
+              <span>Keluar</span>
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -153,17 +157,15 @@ export function SuperAdminApp({
         </div>
 
         <div className="space-y-1.5 p-4">
-          <button
-            type="button"
-            onClick={() => {
-              router.push("/umkm");
-              setIsMobileMenuOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-colors"
-          >
-            <LogoutIcon />
-            <span>Keluar</span>
-          </button>
+          <form action="/api/auth/logout" method="POST">
+            <button
+              type="submit"
+              className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-colors"
+            >
+              <LogoutIcon />
+              <span>Keluar</span>
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -219,16 +221,16 @@ export function SuperAdminApp({
 
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 md:px-8 overflow-x-hidden">
           <div key={activeView} className="view-transition">
-            {activeView === "dashboard" && <SuperDashboardView />}
+            {activeView === "dashboard" && <SuperDashboardView umkmList={sharedUmkmList} />}
             {activeView === "umkm" && (
               <ManageUmkmView
                 accountsList={sharedUmkmList}
                 setAccountsList={setSharedUmkmList}
               />
             )}
-            {activeView === "website" && <ManageWebsiteView />}
+            {activeView === "website" && <ManageWebsiteView initialPromptsList={initialPromptsList} initialContentList={initialContentList} initialCategoriesList={initialCategoriesList} />}
             {activeView === "users" && (
-              <ManageUsersView onAddUmkm={(u) => setSharedUmkmList((prev) => [u, ...prev])} />
+              <ManageUsersView initialUsersList={initialUsersList} onAddUmkm={(u) => setSharedUmkmList((prev) => [u, ...prev])} />
             )}
           </div>
         </main>
@@ -286,34 +288,19 @@ function MetricCard({
   );
 }
 
-function SuperDashboardView() {
+function SuperDashboardView({ umkmList }: { umkmList: any[] }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard label="Total UMKM" value="156 Usaha" trend="+12 baru bulan ini" tone="green" />
-        <MetricCard label="Total Pengguna" value="2.891 User" trend="+14.2% bulan ini" tone="blue" />
+        <MetricCard label="Total UMKM" value={`${umkmList.length} Usaha`} trend="Data real-time" tone="green" />
+        <MetricCard label="Total Pengguna" value="Total User Auth" trend="Data Supabase Auth" tone="blue" />
       </div>
 
-      <section className="panel">
-        <div className="section-title">
-          <div>
-            <h2>Pertumbuhan Bulanan UMKM Baru</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Statistik pendaftaran UMKM selama 12 bulan terakhir.
-            </p>
-          </div>
-          <span className="legend-dot">UMKM Terdaftar</span>
-        </div>
-        <BarChart data={superMonthlyUmkm} tone="green" />
-      </section>
-
-      <section className="panel p-5">
-        <h2 className="mb-4 text-base font-extrabold">Distribusi UMKM Berdasarkan Kategori</h2>
-        <DistributionRow label="Makanan & Minuman" value="72 Usaha (46%)" width="78%" tone="green" />
-        <DistributionRow label="Fashion & Pakaian" value="38 Usaha (24%)" width="46%" tone="blue" />
-        <DistributionRow label="Kerajinan Tangan" value="26 Usaha (17%)" width="33%" tone="purple" />
-        <DistributionRow label="Jasa & Lainnya" value="20 Usaha (13%)" width="25%" tone="yellow" />
-      </section>
+      {umkmList.length === 0 && (
+        <section className="panel p-5">
+          <p className="text-sm text-slate-500">Belum ada data UMKM untuk ditampilkan grafik & distribusi.</p>
+        </section>
+      )}
     </div>
   );
 }
@@ -584,31 +571,32 @@ function formatIndonesianDate(dateStr: string) {
 
 
 
-function ManageUsersView({ onAddUmkm }: { onAddUmkm: (umkm: UmkmAccount) => void }) {
-  const [usersList, setUsersList] = useState(sampleUsers);
+function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: any[], onAddUmkm: (umkm: any) => void }) {
+  const [usersList, setUsersList] = useState<any[]>(initialUsersList);
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const filteredUsers = usersList.filter((user) =>
-    `${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase()),
+  const filteredUsers = usersList.filter((u) =>
+    `${u.name} ${u.email}`.toLowerCase().includes(search.toLowerCase()),
   );
 
-  function toggleStatus(id: number) {
-    setUsersList(
-      usersList.map((user) =>
-        user.id === id
-          ? { ...user, status: user.status === "Aktif" ? "Nonaktif" : "Aktif" }
-          : user,
-      ),
-    );
+  async function toggleStatus(id: string) {
+    const userToUpdate = usersList.find((u) => u.id === id);
+    if (!userToUpdate) return;
+    const updatedUser = { ...userToUpdate, status: userToUpdate.status === "Aktif" ? "Nonaktif" : "Aktif" };
+    
+    setUsersList(usersList.map((u) => u.id === id ? updatedUser : u));
+    await upsertUser(updatedUser);
   }
 
-  function deleteUser(id: number) {
-    setUsersList(usersList.filter((user) => user.id !== id));
+  async function handleDeleteUser(id: string) {
+    setUsersList(usersList.filter((u) => u.id !== id));
+    await deleteUserAction(id);
   }
 
-  function handleAddUser(newUser: UserItem, autoUmkm: UmkmAccount) {
+  async function handleAddUser(newUser: any, autoUmkm: UmkmAccount) {
     setUsersList([newUser, ...usersList]);
+    await upsertUser(newUser);
     onAddUmkm(autoUmkm);
   }
 
@@ -720,7 +708,7 @@ function ManageUsersView({ onAddUmkm }: { onAddUmkm: (umkm: UmkmAccount) => void
                       </button>
                       <button
                         className="h-7 w-7 rounded-md grid place-items-center text-red-500 hover:bg-red-100 bg-red-50 transition-colors"
-                        onClick={() => deleteUser(user.id)}
+                        onClick={() => handleDeleteUser(user.id)}
                         title="Hapus Pengguna"
                         type="button"
                       >
@@ -903,43 +891,37 @@ function AddUserModal({
   );
 }
 
-function ManageWebsiteView() {
-  const [activeTab, setActiveTab] = useState<"beranda" | "tentang" | "prompt">("beranda");
-  const [items, setItems] = useState(initialRecommendationsData);
+function ManageWebsiteView({ 
+  initialPromptsList, 
+  initialContentList,
+  initialCategoriesList 
+}: { 
+  initialPromptsList: any[]; 
+  initialContentList: any[]; 
+  initialCategoriesList: any[];
+}) {
+  const [activeTab, setActiveTab] = useState<"beranda" | "tentang" | "prompt" | "kategori">("beranda");
+  const [items, setItems] = useState<any[]>(() => {
+    const dbHome = initialContentList.find(c => c.key === 'home_recommendations');
+    return dbHome ? dbHome.value : [];
+  });
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastText, setToastText] = useState("");
   const [isAddPromptOpen, setIsAddPromptOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<PromptItem | null>(null);
 
-  const [aboutForm, setAboutForm] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("maberuk_about_content");
-      if (saved) {
-        try {
-          return { ...initialAboutData, ...JSON.parse(saved) };
-        } catch {
-          // ignore
-        }
-      }
-    }
-    return initialAboutData;
+  const [aboutForm, setAboutForm] = useState<any>(() => {
+    const dbAbout = initialContentList.find(c => c.key === 'about_page');
+    return dbAbout ? dbAbout.value : { title: "", subtitle: "", sectionTitle: "", p1: "", p2: "", p3: "", p4: "", kecamatan: "", kota: "", ctaTitle: "", ctaDescription: "", whatsapp: "" };
   });
 
-  const [promptsList, setPromptsList] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("maberuk_prompts_content");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        } catch {
-          // ignore
-        }
-      }
-    }
-    return defaultPromptsData;
+  const [promptsList, setPromptsList] = useState<any[]>(() => {
+    return (initialPromptsList && initialPromptsList.length > 0) ? initialPromptsList : [];
   });
+  
+  const [categoriesList, setCategoriesList] = useState<any[]>(initialCategoriesList || []);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   function triggerToast(text: string) {
     setToastText(text);
@@ -947,40 +929,50 @@ function ManageWebsiteView() {
     setTimeout(() => setShowToast(false), 3500);
   }
 
-  function handleSaveAbout(e: React.FormEvent) {
+  async function handleSaveAbout(e: React.FormEvent) {
     e.preventDefault();
-    if (typeof window !== "undefined") {
-      localStorage.setItem("maberuk_about_content", JSON.stringify(aboutForm));
-    }
+    await saveSiteContent('about_page', aboutForm);
     triggerToast("✓ Perubahan Halaman Tentang Kami berhasil disimpan ke landing page (/tentang)!");
   }
 
-  function handleAddPrompt(newPrompt: PromptItem) {
+  async function handleAddPrompt(newPrompt: PromptItem) {
     const updated = [newPrompt, ...promptsList];
     setPromptsList(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("maberuk_prompts_content", JSON.stringify(updated));
-    }
+    await upsertPrompt(newPrompt);
     triggerToast("✓ Prompt AI baru berhasil ditambahkan ke direktori prompt (/direktori-prompt)!");
   }
 
-  function handleDeletePrompt(id: number) {
+  async function handleDeletePrompt(id: number) {
     const updated = promptsList.filter((p) => p.id !== id);
     setPromptsList(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("maberuk_prompts_content", JSON.stringify(updated));
-    }
+    await deletePrompt(id);
     triggerToast("✓ Prompt berhasil dihapus!");
   }
 
-  function handleEditPrompt(updated: PromptItem) {
+  async function handleEditPrompt(updated: PromptItem) {
     const next = promptsList.map((p) => (p.id === updated.id ? updated : p));
     setPromptsList(next);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("maberuk_prompts_content", JSON.stringify(next));
-    }
+    await upsertPrompt(updated);
     setEditingPrompt(null);
     triggerToast("✓ Prompt berhasil diperbarui!");
+  }
+
+  async function handleAddCategory(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    const newCategory = { name: newCategoryName };
+    const { success } = await upsertCategory(newCategory);
+    if (success) {
+      setCategoriesList([...categoriesList, newCategory]);
+      setNewCategoryName("");
+      triggerToast("✓ Kategori berhasil ditambahkan!");
+    }
+  }
+
+  async function handleDeleteCategory(id: number) {
+    await deleteCategory(id);
+    setCategoriesList(categoriesList.filter(c => c.id !== id));
+    triggerToast("✓ Kategori berhasil dihapus!");
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>, targetIndex: number) {
@@ -1065,6 +1057,17 @@ function ManageWebsiteView() {
           >
             Direktori Prompt (AI)
           </button>
+          <button
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+              activeTab === "kategori"
+                ? "bg-[#10b981] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            onClick={() => setActiveTab("kategori")}
+            type="button"
+          >
+            Kategori UMKM
+          </button>
         </div>
       </div>
 
@@ -1088,7 +1091,10 @@ function ManageWebsiteView() {
               <button
                 className="primary-button bg-[#10b981] hover:bg-[#059669] text-xs font-bold py-2 px-3.5 shrink-0 rounded-lg transition-transform active:scale-95"
                 type="button"
-                onClick={() => triggerToast("✓ Urutan rekomendasi UMKM berhasil disimpan!")}
+                onClick={async () => {
+                  await saveSiteContent('home_recommendations', items);
+                  triggerToast("✓ Urutan rekomendasi UMKM berhasil disimpan!");
+                }}
               >
                 Simpan Urutan
               </button>
@@ -1294,7 +1300,7 @@ function ManageWebsiteView() {
             </button>
           </div>
         </form>
-      ) : (
+      ) : activeTab === "prompt" ? (
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-6 space-y-5 sm:space-y-6 shadow-2xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
@@ -1363,6 +1369,41 @@ function ManageWebsiteView() {
             />
           )}
         </section>
+      ) : (
+        <div className="space-y-4 sm:space-y-5">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-slate-900">Kategori UMKM</h2>
+                <p className="mt-0.5 text-xs text-slate-500 font-normal">Tambah atau hapus kategori untuk UMKM.</p>
+              </div>
+            </div>
+            
+            <form onSubmit={handleAddCategory} className="flex gap-3 mb-6">
+              <input 
+                value={newCategoryName} 
+                onChange={(e) => setNewCategoryName(e.target.value)} 
+                placeholder="Nama Kategori Baru" 
+                className="field flex-1" 
+                required 
+              />
+              <button type="submit" className="primary-button bg-[#10b981] hover:bg-[#059669] px-4 rounded-lg font-bold text-xs">Tambah</button>
+            </form>
+
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {categoriesList.map((cat, idx) => (
+                <div key={idx} className="p-3 border border-slate-200 rounded-xl flex items-center justify-between bg-slate-50">
+                  <span className="text-sm font-semibold text-slate-800">{cat.name}</span>
+                  {cat.id && (
+                    <button type="button" onClick={() => handleDeleteCategory(cat.id)} className="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-md transition-colors">
+                      <TrashIcon />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );

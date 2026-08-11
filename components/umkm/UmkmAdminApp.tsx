@@ -1,14 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  monthlyExpense,
-  monthlyIncome,
-  summaryRows,
-  transactions,
-  umkmNavItems,
-} from "@/data/mock-data";
+const monthlyExpense: any[] = [];
+const monthlyIncome: any[] = [];
+const summaryRows: any[] = [];
+const transactions: any[] = [];
+import { umkmNavItems } from "@/data/mock-data";
 import {
   EditIcon,
   LogoMark,
@@ -18,11 +15,11 @@ import {
 } from "@/components/icons/Icons";
 import type { UmkmView } from "@/types";
 
-export function UmkmAdminApp() {
-  const router = useRouter();
+export function UmkmAdminApp({ user, umkmData }: { user: any; umkmData: any }) {
+  const shopName: string = umkmData?.name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Toko Anda";
   const [activeView, setActiveView] = useState<UmkmView>("dashboard");
   const [isModalOpen, setModalOpen] = useState(false);
-  const [shopLogo, setShopLogo] = useState<string | null>("/images/logo-maberuk.jpg");
+  const [shopLogo, setShopLogo] = useState<string | null>(umkmData?.logo_url || "/images/logo-maberuk.jpg");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const activeLabel = useMemo(
@@ -34,7 +31,7 @@ export function UmkmAdminApp() {
     <div className="min-h-screen bg-[#f6f7f8] text-slate-950">
       {/* Desktop Sidebar (Left) */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[210px] border-r border-slate-200/80 bg-white md:flex md:flex-col">
-        <BrandBlock onSwitchMode={() => router.push("/admin")} shopLogo={shopLogo} />
+        <BrandBlock shopLogo={shopLogo} />
         <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
           {umkmNavItems.map((item) => (
             <button
@@ -49,14 +46,15 @@ export function UmkmAdminApp() {
           ))}
         </nav>
         <div className="px-4 pb-6">
-          <button
-            className="logout-button"
-            onClick={() => router.push("/admin")}
-            type="button"
-          >
-            <LogoutIcon />
-            Keluar
-          </button>
+          <form action="/api/auth/logout" method="POST">
+            <button
+              className="logout-button"
+              type="submit"
+            >
+              <LogoutIcon />
+              Keluar
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -152,17 +150,15 @@ export function UmkmAdminApp() {
             </svg>
             <span>Pengaturan</span>
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              router.push("/admin");
-              setIsMobileMenuOpen(false);
-            }}
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
-          >
-            <LogoutIcon />
-            <span>Keluar</span>
-          </button>
+          <form action="/api/auth/logout" method="POST">
+            <button
+              type="submit"
+              className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+            >
+              <LogoutIcon />
+              <span>Keluar</span>
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -181,9 +177,9 @@ export function UmkmAdminApp() {
                       ? "Profil Usaha"
                       : "Dashboard"}
               </h1>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="text-sm text-slate-500">
                 {activeView === "dashboard"
-                  ? "Selamat datang kembali, Toko Sari Rasa."
+                  ? `Selamat datang kembali, ${shopName}.`
                   : activeView === "bookkeeping"
                     ? "Catat dan pantau arus kas masuk dan keluar operasional UMKM Anda."
                     : activeView === "reports"
@@ -220,7 +216,7 @@ export function UmkmAdminApp() {
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
                 {activeView === "dashboard"
-                  ? "Selamat datang kembali, Toko Sari Rasa."
+                  ? `Selamat datang kembali, ${shopName}.`
                   : activeView === "bookkeeping"
                     ? "Catat & pantau arus kas toko."
                     : activeView === "reports"
@@ -260,20 +256,15 @@ export function UmkmAdminApp() {
   );
 }
 
-function BrandBlock({ onSwitchMode, shopLogo }: { onSwitchMode: () => void; shopLogo?: string | null }) {
+function BrandBlock({ shopLogo }: { shopLogo?: string | null }) {
   return (
-    <button
-      className="brand-block"
-      onClick={onSwitchMode}
-      title="Lihat Super Admin"
-      type="button"
-    >
+    <div className="brand-block" title="UMKM Console">
       <LogoMark src={shopLogo} />
       <div>
         <p className="text-left text-xs font-bold leading-tight text-slate-900 tracking-wide">MABERUK</p>
         <p className="text-left text-[10px] font-medium leading-tight text-slate-400 mt-0.5">UMKM Console</p>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -323,8 +314,8 @@ function DashboardView({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard label="Pemasukan" value="Rp 8.750.000" trend="+8.1% bulan ini" tone="green" />
-        <MetricCard label="Pengeluaran" value="Rp 3.200.000" trend="-2.4% hemat biaya" tone="red" />
+        <MetricCard label="Pemasukan" value="Rp 0" trend="Belum ada transaksi" tone="green" />
+        <MetricCard label="Pengeluaran" value="Rp 0" trend="Belum ada transaksi" tone="red" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
