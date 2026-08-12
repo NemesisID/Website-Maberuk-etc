@@ -146,7 +146,7 @@ export function UmkmAdminApp({
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <LogoMark src={shopLogo} />
-          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{umkmData?.name || "UMKM Console"}</h1>
+          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{umkmData?.name || "Dashboard UMKM"}</h1>
         </div>
         <form action="/api/auth/logout" method="POST">
           <button
@@ -312,7 +312,7 @@ function BrandBlock({ shopLogo, shopName }: { shopLogo?: string | null, shopName
       <LogoMark src={shopLogo} />
       <div>
         <p className="text-left text-sm font-bold leading-tight text-slate-900 tracking-wide">{shopName}</p>
-        <p className="text-left text-sm font-medium leading-tight text-slate-400 mt-0.5">UMKM Console</p>
+        <p className="text-left text-sm font-medium leading-tight text-slate-400 mt-0.5">Dashboard UMKM</p>
       </div>
     </div>
   );
@@ -777,11 +777,6 @@ function ProfileView({
   const [fbPage, setFbPage] = useState(umkmData?.social?.facebook || "");
   const [tiktokAccount, setTiktokAccount] = useState(umkmData?.social?.tiktok || "");
 
-  const [weekdaysStart, setWeekdaysStart] = useState(umkmData?.operational_hours?.weekdaysStart || "08:00");
-  const [weekdaysEnd, setWeekdaysEnd] = useState(umkmData?.operational_hours?.weekdaysEnd || "21:00");
-  const [weekendsStart, setWeekendsStart] = useState(umkmData?.operational_hours?.weekendsStart || "09:00");
-  const [weekendsEnd, setWeekendsEnd] = useState(umkmData?.operational_hours?.weekendsEnd || "22:00");
-
   const [isLocating, setIsLocating] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<string | null>(umkmData?.gps_coords || null);
   const [isSaving, setIsSaving] = useState(false);
@@ -899,12 +894,6 @@ function ProfileView({
         instagram: igAccount,
         facebook: fbPage,
         tiktok: tiktokAccount
-      },
-      operational_hours: {
-        weekdaysStart,
-        weekdaysEnd,
-        weekendsStart,
-        weekendsEnd
       },
       gps_coords: gpsCoords || mapQuery,
       gallery: galleryList,
@@ -1213,14 +1202,6 @@ function ProfileView({
 
         <div className="space-y-6">
           <section className="panel p-6">
-            <h2 className="mb-5 text-base font-bold text-slate-900">Jam Operasional Toko</h2>
-            <div className="space-y-4">
-              <TimeRow label="Senin - Jumat" start={weekdaysStart} end={weekdaysEnd} onChangeStart={setWeekdaysStart} onChangeEnd={setWeekdaysEnd} />
-              <TimeRow label="Sabtu - Minggu" start={weekendsStart} end={weekendsEnd} onChangeStart={setWeekendsStart} onChangeEnd={setWeekendsEnd} />
-            </div>
-          </section>
-
-          <section className="panel p-6">
             <h2 className="mb-5 text-base font-bold text-slate-900">Sosial Media & Kontak</h2>
             <div className="space-y-4">
               <div>
@@ -1314,39 +1295,6 @@ function ProfileView({
         >
           {isSaving ? "Menyimpan..." : "Simpan Perubahan Profil"}
         </button>
-      </div>
-    </div>
-  );
-}
-
-function TimeRow({ 
-  label, 
-  start, 
-  end,
-  onChangeStart,
-  onChangeEnd
-}: { 
-  label: string; 
-  start: string; 
-  end: string;
-  onChangeStart: (val: string) => void;
-  onChangeEnd: (val: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="font-semibold text-slate-700 text-sm sm:text-sm">{label}</span>
-      <div className="flex items-center gap-2">
-        <input 
-          className="field w-20 text-center text-sm py-1.5 px-2 font-medium" 
-          value={start} 
-          onChange={(e) => onChangeStart(e.target.value)}
-        />
-        <span className="text-sm text-slate-400 font-medium">s/d</span>
-        <input 
-          className="field w-20 text-center text-sm py-1.5 px-2 font-medium" 
-          value={end} 
-          onChange={(e) => onChangeEnd(e.target.value)}
-        />
       </div>
     </div>
   );
