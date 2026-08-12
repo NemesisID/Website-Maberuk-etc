@@ -142,16 +142,26 @@ export function UmkmAdminApp({
         </div>
       </aside>
 
-      {/* Mobile Top Header (Brand only) */}
-      <header className="sticky top-0 z-30 flex items-center justify-center border-b border-slate-200 bg-white px-4 py-4 md:hidden shadow-sm">
-        <div className="flex items-center gap-2">
+      {/* Mobile Top Header */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden shadow-sm">
+        <div className="flex items-center gap-2 min-w-0">
           <LogoMark src={shopLogo} />
-          <h1 className="text-base font-bold text-slate-900 tracking-wide">{umkmData?.name || "UMKM Console"}</h1>
+          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{umkmData?.name || "UMKM Console"}</h1>
         </div>
+        <form action="/api/auth/logout" method="POST">
+          <button
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 transition-colors border border-rose-200 shrink-0"
+            type="submit"
+            title="Keluar dari Akun"
+          >
+            <LogoutIcon />
+            <span>Keluar</span>
+          </button>
+        </form>
       </header>
 
       {/* Main Container */}
-      <div className="md:pl-[210px] pb-24 md:pb-0">
+      <div className="md:pl-[210px] pb-32 md:pb-10">
         {/* Page Header (Desktop & Title View) */}
         <header className="sticky top-0 z-10 hidden border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur md:block md:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
@@ -252,6 +262,11 @@ export function UmkmAdminApp({
             )}
             {activeView === "profile" && <ProfileView user={user} umkmData={umkmData} shopLogo={shopLogo} setShopLogo={setShopLogo} categories={categories} />}
           </div>
+
+          {/* UMKM Dashboard Footer */}
+          <footer className="mt-12 pt-6 border-t border-slate-200/80 text-center text-xs font-semibold text-slate-400">
+            <p>© 2026 MABERUK — Platform Digital UMKM Babatan. All rights reserved.</p>
+          </footer>
         </main>
       </div>
 
@@ -1585,24 +1600,24 @@ function TransactionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
-      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <h2 className="text-base font-bold text-slate-900">
             {editingTransaction?.id ? "Edit Detail Transaksi" : "Tambah Transaksi Baru"}
           </h2>
           <button className="icon-button" onClick={onClose} title="Tutup modal" type="button">
-            X
+            ✕
           </button>
         </div>
 
         {formError && (
-          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-bold text-rose-600">
+          <div className="mb-4 shrink-0 rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-bold text-rose-600">
             {formError}
           </div>
         )}
-        <div className="form-grid">
-          <label className="text-sm font-semibold text-slate-700">
+        <div className="form-grid flex-1 overflow-y-auto space-y-4 pr-1">
+          <label className="block text-sm font-semibold text-slate-700">
             Tipe Transaksi
             <div className="segmented grid grid-cols-2 mt-1">
               <button
@@ -1621,7 +1636,7 @@ function TransactionModal({
               </button>
             </div>
           </label>
-          <label className="text-sm font-semibold text-slate-700">
+          <label className="block text-sm font-semibold text-slate-700">
             Tanggal Transaksi
             <input 
               className="field font-normal text-slate-800" 
@@ -1631,7 +1646,7 @@ function TransactionModal({
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-semibold text-slate-700">
+            <label className="block text-sm font-semibold text-slate-700">
               Kategori
               <select className="field font-normal text-slate-800" onChange={(event) => setCategory(event.target.value)} value={category}>
                 {categories.map((item) => (
@@ -1639,17 +1654,19 @@ function TransactionModal({
                 ))}
               </select>
             </label>
-            <label className="text-sm font-semibold text-slate-700">
+            <label className="block text-sm font-semibold text-slate-700">
               Jumlah (Rp)
               <input 
                 className="field font-normal text-slate-800" 
+                type="text"
+                inputMode="numeric"
                 placeholder={isExpense ? "150000" : "300000"} 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
               />
             </label>
           </div>
-          <label className="text-sm font-semibold text-slate-700">
+          <label className="block text-sm font-semibold text-slate-700">
             Keterangan
             <textarea
               className="field min-h-24 font-normal text-slate-800 resize-y"
@@ -1659,7 +1676,7 @@ function TransactionModal({
             />
           </label>
         </div>
-        <div className="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-4">
+        <div className="mt-4 flex justify-end gap-3 border-t border-slate-100 pt-4 shrink-0">
           <button className="secondary-button" onClick={onClose} type="button">Batal</button>
           <button 
             className="primary-button bg-[#10b981] hover:bg-[#059669] disabled:opacity-50" 

@@ -110,30 +110,15 @@ export default function HomeClient({ initialUmkmList }: { initialUmkmList: any[]
               </p>
 
               {/* Search */}
-              <div className="flex items-center gap-3 mt-2">
-                <div className="flex-1 relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <SearchIcon />
-                  </span>
-                  <input
-                    type="text"
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    placeholder="Cari Nama UMKM unggulan..."
-                    className="w-full pl-9 pr-4 py-3 text-sm rounded-xl border border-gray-200 bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all shadow-sm"
-                  />
-                </div>
-                <button className="flex-shrink-0 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold px-5 py-3 rounded-xl transition-colors shadow-sm whitespace-nowrap">
-                  Jelajahi UMKM
-                </button>
+              <div className="flex items-center gap-3 mt-2">  
               </div>
             </div>
 
             {/* Right Image */}
             <div className="relative h-72 lg:h-96 rounded-2xl overflow-hidden shadow-xl">
               <Image
-                src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=600&fit=crop"
-                alt="Pelaku UMKM Babatan â€“ wirausaha lokal berdaya"
+                src="/images/background.png"
+                alt="Pelaku UMKM"
                 fill
                 className="object-cover"
                 priority

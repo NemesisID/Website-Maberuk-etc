@@ -87,15 +87,25 @@ export function SuperAdminApp({
       </aside>
 
       {/* Mobile Top Header */}
-      <header className="sticky top-0 z-30 flex items-center justify-center border-b border-slate-200 bg-white px-4 py-4 md:hidden shadow-sm">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden shadow-sm">
         <div className="flex items-center gap-2">
           <LogoMark />
           <h1 className="text-base font-bold text-slate-900 tracking-wide">MABERUK ADMIN</h1>
         </div>
+        <form action="/api/auth/logout" method="POST">
+          <button
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 transition-colors border border-rose-200 shrink-0"
+            type="submit"
+            title="Keluar dari Akun Admin"
+          >
+            <LogoutIcon />
+            <span>Keluar</span>
+          </button>
+        </form>
       </header>
 
       {/* Main Container */}
-      <div className="md:pl-[180px]">
+      <div className="md:pl-[180px] pb-32 md:pb-10">
         {/* Desktop Page Header */}
         <header className="sticky top-0 z-10 hidden border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur md:block md:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
@@ -158,6 +168,11 @@ export function SuperAdminApp({
               <ManageUsersView initialUsersList={initialUsersList} onAddUmkm={(u) => setSharedUmkmList((prev) => [u, ...prev])} />
             )}
           </div>
+
+          {/* Admin Dashboard Footer */}
+          <footer className="mt-12 pt-6 border-t border-slate-200/80 text-center text-xs font-semibold text-slate-400">
+            <p>© 2026 MABERUK — Platform Digital UMKM Babatan. All rights reserved.</p>
+          </footer>
         </main>
       </div>
 
@@ -826,9 +841,9 @@ function ResetPasswordModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
-      <section className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <section className="relative my-auto flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-900">Reset Kata Sandi</h2>
             <p className="text-sm text-slate-500 font-normal mt-0.5">{user.name} (@{user.username || user.name})</p>
@@ -940,15 +955,15 @@ function AddUserModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
-      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <h2 className="text-base font-bold text-slate-900">Tambah Owner UMKM Baru</h2>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">
-            X
+            ✕
           </button>
         </div>
-        <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-100 px-3.5 py-3">
+        <div className="mb-4 shrink-0 rounded-lg bg-emerald-50 border border-emerald-100 px-3.5 py-3">
           <p className="text-sm font-bold text-emerald-700">✦ Auto-generate Profil UMKM</p>
           <p className="text-sm text-emerald-600 font-normal mt-0.5">
             Profil UMKM default akan dibuat otomatis dan muncul di Kelola UMKM. Owner bisa mengeditnya sendiri setelah login.
@@ -956,12 +971,12 @@ function AddUserModal({
         </div>
 
         {errorMsg && (
-          <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-bold text-rose-600">
+          <div className="mb-4 shrink-0 rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm font-bold text-rose-600">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Nama Lengkap *</label>
@@ -1629,15 +1644,15 @@ function AddPromptModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
-      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <h2 className="text-base font-bold text-slate-900">Tambah Prompt AI Baru</h2>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">
-            X
+            ✕
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Judul Prompt *</label>
             <input
@@ -1740,16 +1755,16 @@ function EditPromptModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-xs">
-      <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-900">Edit Prompt AI</h2>
             <p className="text-sm text-slate-400 font-normal mt-0.5 truncate max-w-[280px]">{prompt.title}</p>
           </div>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">✕</button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Judul Prompt *</label>
             <input
