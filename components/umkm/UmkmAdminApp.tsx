@@ -115,7 +115,7 @@ export function UmkmAdminApp({
     <div className="min-h-screen bg-[#f6f7f8] text-slate-950">
       {/* Desktop Sidebar (Left) */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[210px] border-r border-slate-200/80 bg-white md:flex md:flex-col">
-        <BrandBlock shopLogo={shopLogo} shopName={umkmData?.name || "UMKM"} />
+        <BrandBlock shopLogo={shopLogo} shopName={ownerName} />
         <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
           {umkmNavItems.map((item) => (
             <button
@@ -146,7 +146,7 @@ export function UmkmAdminApp({
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <LogoMark src={shopLogo} />
-          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{umkmData?.name || "Dashboard UMKM"}</h1>
+          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{ownerName}</h1>
         </div>
         <form action="/api/auth/logout" method="POST">
           <button
@@ -915,7 +915,7 @@ function ProfileView({
           <label className="relative group grid h-20 w-20 shrink-0 place-items-center rounded-full bg-slate-100 border-2 border-dashed border-slate-300 hover:border-emerald-500 shadow-inner cursor-pointer overflow-hidden transition-all">
             <input
               type="file"
-              accept="image/*"
+              accept="image/png, image/jpeg, image/webp"
               className="hidden"
               onChange={handleLogoChange}
               disabled={isUploading}
@@ -1182,7 +1182,7 @@ function ProfileView({
               >
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/png, image/jpeg, image/webp"
                   className="hidden"
                   onChange={handleGalleryUpload}
                   disabled={isUploadingGallery}

@@ -20,7 +20,7 @@ import {
   TrashIcon,
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
-import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore } from "@/app/admin/actions";
+import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore, uploadFileToR2 } from "@/app/admin/actions";
 
 export function SuperAdminApp({ 
   user, 
@@ -1708,18 +1708,32 @@ function AddPromptModal({
   const [category, setCategory] = useState("FOTO PRODUK");
   const [promptText, setPromptText] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'prompts');
+
+        const res = await uploadFileToR2(formData);
+        if (res.success && res.publicUrl) {
+          setImage(res.publicUrl);
+        } else {
+          console.error("Gagal mengupload gambar ke R2:", res.error);
+          alert("Gagal mengupload gambar: " + res.error);
+        }
+      } catch (err) {
+        console.error("Kesalahan upload gambar:", err);
+      } finally {
+        setIsUploading(false);
+      }
     }
   }
 
@@ -1788,14 +1802,16 @@ function AddPromptModal({
               </div>
             ) : (
               <label className="relative rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/30 p-4 flex flex-col items-center justify-center text-center transition-colors cursor-pointer group">
-                <input type="file" accept="image/*" onChange={handleImageFileChange} className="sr-only" />
+                <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleImageFileChange} className="sr-only" />
                 <div className="flex flex-col items-center gap-1 py-2">
                   <div className="h-9 w-9 rounded-full bg-emerald-100/80 text-emerald-600 flex items-center justify-center mb-0.5">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-bold text-slate-700">Klik untuk Mengunggah / Pilih Gambar</p>
+                  <p className="text-sm font-bold text-slate-700">
+                    {isUploading ? "Mengunggah Gambar..." : "Klik untuk Mengunggah / Pilih Gambar"}
+                  </p>
                   <p className="text-sm text-slate-400">PNG, JPG, atau WEBP</p>
                 </div>
               </label>
@@ -1834,17 +1850,33 @@ function EditPromptModal({
   const [title, setTitle] = useState(prompt.title);
   const [category, setCategory] = useState(prompt.category);
   const [promptText, setPromptText] = useState(prompt.prompt);
-  const [image, setImage] = useState<string>(prompt.image);
+  const [image, setImage] = useState<string | null>(prompt.image || null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'prompts');
+
+        const res = await uploadFileToR2(formData);
+        if (res.success && res.publicUrl) {
+          setImage(res.publicUrl);
+        } else {
+          console.error("Gagal mengupload gambar ke R2:", res.error);
+          alert("Gagal mengupload gambar: " + res.error);
+        }
+      } catch (err) {
+        console.error("Kesalahan upload gambar:", err);
+      } finally {
+        setIsUploading(false);
+      }
     }
   }
 
@@ -1894,10 +1926,12 @@ function EditPromptModal({
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1.5">Gambar Banner</label>
             <div className="relative h-36 w-full rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-slate-50 mb-2">
-              <img src={image} alt="Preview Banner" className="h-full w-full object-cover" />
-              <label className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                <input type="file" accept="image/*" onChange={handleImageFileChange} className="sr-only" />
-                <span className="rounded-lg bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow">Ganti Gambar</span>
+              <img src={image || ""} alt="Preview Banner" className="h-full w-full object-cover" />
+              <label className={`absolute inset-0 flex items-center justify-center bg-slate-900/40 transition-opacity ${isUploading ? 'opacity-100 cursor-wait' : 'opacity-0 hover:opacity-100 cursor-pointer'}`}>
+                <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleImageFileChange} className="sr-only" disabled={isUploading} />
+                <span className="rounded-lg bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow">
+                  {isUploading ? "Mengunggah..." : "Ganti Gambar"}
+                </span>
               </label>
             </div>
             <p className="text-sm text-slate-400">Hover gambar lalu klik untuk mengganti. PNG, JPG, atau WEBP.</p>

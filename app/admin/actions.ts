@@ -101,7 +101,7 @@ export async function uploadFileToR2(formData: FormData) {
       targetUmkmId = user.id;
     }
 
-    if (targetUmkmId) {
+    if (folder !== 'prompts' && targetUmkmId) {
       const { data: existingStore } = await adminSupabase.from('umkm').select('id').eq('id', targetUmkmId).single();
       
       if (!existingStore && user?.id) {
@@ -113,7 +113,6 @@ export async function uploadFileToR2(formData: FormData) {
           slug: slug,
           name: umkmName,
           owner: user.user_metadata?.name || 'Owner',
-          username: user.id,
           category: 'Lainnya',
           address: 'Babatan, Surabaya',
           active: true
