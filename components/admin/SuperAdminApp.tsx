@@ -1883,7 +1883,7 @@ function EditPromptModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !promptText) return;
-    onSave({ ...prompt, title, category, prompt: promptText, image });
+    onSave({ ...prompt, title, category, prompt: promptText, image: image || "" });
   }
 
   if (!mounted) return null;
