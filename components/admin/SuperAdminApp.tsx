@@ -1,6 +1,7 @@
 "use client";
 
-import { type DragEvent, useMemo, useState } from "react";
+import { type DragEvent, useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   defaultHomeData,
   defaultPromptsData,
@@ -19,7 +20,7 @@ import {
   TrashIcon,
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
-import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore } from "@/app/admin/actions";
+import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore, uploadFileToR2 } from "@/app/admin/actions";
 
 export function SuperAdminApp({ 
   user, 
@@ -302,94 +303,112 @@ function ConfirmModal({
   );
 }
 
-function SuperDashboardView({ umkmList, usersList = [] }: { umkmList: any[]; usersList?: any[] }) {
+function SuperDashboardView({ umkmList, usersList = [] }: { umkmList: any[], usersList?: any[] }) {
   const displayUmkmCount = umkmList.length;
-  const activeUsersCount = useMemo(() => {
-    if (usersList && usersList.length > 0) {
-      return usersList.filter((u: any) => u.status !== "Nonaktif").length;
+  const displayUsersCount = usersList.length;
+
+  // Compute category distribution
+  const categoryCounts: Record<string, number> = {};
+  umkmList.forEach(u => {
+    const cat = u.category || 'Lainnya';
+    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+  });
+  const sortedCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const tones: Array<"green" | "blue" | "yellow" | "purple"> = ["green", "blue", "yellow", "purple"];
+  const totalUmkmForCat = umkmList.length || 1; 
+
+  // Compute monthly UMKM growth (last 6 months)
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+  const monthlyCounts = new Map<string, number>();
+  umkmList.forEach(u => {
+    if (u.created_at) {
+      const d = new Date(u.created_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      monthlyCounts.set(key, (monthlyCounts.get(key) || 0) + 1);
     }
-    return umkmList.length;
-  }, [usersList, umkmList]);
+  });
 
-  // Monthly growth calculation based on created_at in umkmList
-  const monthlyData = useMemo(() => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-    const counts = Array(12).fill(0);
-    umkmList.forEach((item) => {
-      if (item.created_at) {
-        const d = new Date(item.created_at);
-        if (!isNaN(d.getTime())) {
-          counts[d.getMonth()]++;
-        }
-      }
+  const dynamicMonthlyUmkm = [];
+  const currentDate = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    dynamicMonthlyUmkm.push({
+      month: months[d.getMonth()],
+      value: monthlyCounts.get(key) || 0
     });
-    const totalRecorded = counts.reduce((a, b) => a + b, 0);
-    if (totalRecorded === 0) {
-      return superMonthlyUmkm;
+  }
+
+  // Calculate trends for UMKM
+  const thisMonthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+  const lastMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+  const lastMonthKey = `${lastMonthDate.getFullYear()}-${lastMonthDate.getMonth()}`;
+  
+  const newUmkmThisMonth = monthlyCounts.get(thisMonthKey) || 0;
+  const newUmkmLastMonth = monthlyCounts.get(lastMonthKey) || 0;
+  let umkmTrend = "0% bulan ini";
+  if (newUmkmLastMonth > 0) {
+    const pct = Math.round(((newUmkmThisMonth - newUmkmLastMonth) / newUmkmLastMonth) * 100);
+    umkmTrend = `${pct > 0 ? '+' : ''}${pct}% bulan ini`;
+  } else if (newUmkmThisMonth > 0) {
+    umkmTrend = `+100% bulan ini`;
+  }
+
+  // Calculate trends for Users
+  const userMonthlyCounts = new Map<string, number>();
+  usersList.forEach(u => {
+    if (u.created_at) {
+      const d = new Date(u.created_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      userMonthlyCounts.set(key, (userMonthlyCounts.get(key) || 0) + 1);
     }
-    return months.map((month, idx) => ({
-      month,
-      value: counts[idx]
-    }));
-  }, [umkmList]);
-
-  // Category distribution calculation
-  const categoryData = useMemo(() => {
-    const total = umkmList.length || 1;
-    const catMap: Record<string, number> = {};
-    umkmList.forEach((item) => {
-      const cat = item.category || 'Lainnya';
-      catMap[cat] = (catMap[cat] || 0) + 1;
-    });
-
-    const knownCategories = ["Makanan & Minuman", "Fashion & Pakaian", "Kerajinan Tangan", "Jasa & Servis", "Lainnya"];
-    const tones: Array<"green" | "blue" | "yellow" | "purple"> = ["green", "blue", "yellow", "purple", "green"];
-
-    return knownCategories.map((label, idx) => {
-      const count = catMap[label] || 0;
-      const pct = Math.round((count / total) * 100);
-      return {
-        label,
-        value: `${pct}% (${count})`,
-        width: `${pct}%`,
-        tone: tones[idx % tones.length]
-      };
-    });
-  }, [umkmList]);
-
+  });
+  const newUserThisMonth = userMonthlyCounts.get(thisMonthKey) || 0;
+  const newUserLastMonth = userMonthlyCounts.get(lastMonthKey) || 0;
+  let userTrend = "0% bulan ini";
+  if (newUserLastMonth > 0) {
+    const pct = Math.round(((newUserThisMonth - newUserLastMonth) / newUserLastMonth) * 100);
+    userTrend = `${pct > 0 ? '+' : ''}${pct}% bulan ini`;
+  } else if (newUserThisMonth > 0) {
+    userTrend = `+100% bulan ini`;
+  }
+  
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard label="Total UMKM Terdaftar" value={`${displayUmkmCount} Usaha`} trend={`+${displayUmkmCount} usaha aktif`} tone="green" />
-        <MetricCard label="Total Pengguna Aktif" value={`${activeUsersCount} User`} trend={`+${activeUsersCount} pengguna aktif`} tone="blue" />
+        <MetricCard label="Total UMKM Terdaftar" value={`${displayUmkmCount} Usaha`} trend={umkmTrend} tone="green" />
+        <MetricCard label="Total Pengguna Aktif" value={`${displayUsersCount} User`} trend={userTrend} tone="blue" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <section className="panel p-5">
-          <div className="section-title px-0 pt-0">
-            <h2>Pertumbuhan UMKM 2026</h2>
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <section className="panel">
+          <div className="section-title">
+            <h2>Pertumbuhan UMKM</h2>
             <div className="flex gap-4">
-              <span className="legend-dot">Target</span>
-              <span className="legend-dot red">Aktual</span>
+              <span className="legend-dot">Periode 6 Bulan</span>
             </div>
           </div>
-          <BarChart data={monthlyData} tone="green" />
+          <BarChart data={dynamicMonthlyUmkm} tone="green" />
         </section>
 
         <section className="panel p-5">
           <div className="section-title px-0 pt-0">
             <h2>Distribusi Kategori</h2>
           </div>
-          <div className="flex flex-col gap-2 pt-2">
-            {categoryData.map((item) => (
-              <DistributionRow 
-                key={item.label} 
-                label={item.label} 
-                value={item.value} 
-                width={item.width} 
-                tone={item.tone} 
-              />
-            ))}
+          <div className="p-5 flex flex-col gap-2">
+            {sortedCategories.length > 0 ? (
+              sortedCategories.map((cat, idx) => (
+                <DistributionRow 
+                  key={cat[0]}
+                  label={cat[0]} 
+                  value={`${Math.round((cat[1] / totalUmkmForCat) * 100)}% (${cat[1]})`} 
+                  width={`${Math.round((cat[1] / totalUmkmForCat) * 100)}%`} 
+                  tone={tones[idx % tones.length]} 
+                />
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">Belum ada data kategori.</p>
+            )}
           </div>
         </section>
       </div>
@@ -968,6 +987,9 @@ function ResetPasswordModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!newPassword.trim()) return;
@@ -985,9 +1007,11 @@ function ResetPasswordModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
-      <section className="relative my-auto flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <form onSubmit={handleSubmit} className="relative flex w-full max-w-md flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-hidden">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-900">Reset Kata Sandi</h2>
@@ -1002,7 +1026,7 @@ function ResetPasswordModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Kata Sandi Baru *</label>
             <input
@@ -1014,15 +1038,16 @@ function ResetPasswordModal({
             />
             <p className="mt-1 text-sm text-slate-400">Kata sandi baru akan langsung berlaku untuk login pengguna ini.</p>
           </div>
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-            <button className="secondary-button" onClick={onClose} type="button">Batal</button>
-            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Menyimpan..." : "Simpan Kata Sandi Baru"}
-            </button>
-          </div>
-        </form>
-      </section>
-    </div>
+        </div>
+        <div className="mt-4 flex shrink-0 justify-end gap-2 pt-4 border-t border-slate-100">
+          <button className="secondary-button" onClick={onClose} type="button">Batal</button>
+          <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Menyimpan..." : "Simpan Kata Sandi Baru"}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body
   );
 }
 
@@ -1042,6 +1067,9 @@ function AddUserModal({
   const [registeredDate, setRegisteredDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1099,9 +1127,11 @@ function AddUserModal({
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
-      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <form onSubmit={handleSubmit} className="relative flex w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-hidden">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <h2 className="text-base font-bold text-slate-900">Tambah Owner UMKM Baru</h2>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">
@@ -1121,85 +1151,86 @@ function AddUserModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Nama Lengkap *</label>
-              <input
-                className="field font-normal text-slate-800"
-                placeholder="Contoh: Supriyadi"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Nama Lengkap *</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  placeholder="Contoh: Supriyadi"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Username *</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  type="text"
+                  placeholder="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Kata Sandi (Password) *</label>
+                <input
+                  className="field font-mono text-slate-800"
+                  placeholder="password123"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">No. Telepon / WhatsApp</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  placeholder="0812-3456-7890"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Nama Toko / Usaha *</label>
+                <input
+                  className="field font-normal text-slate-800"
+                  placeholder="Contoh: Kedai Kopi Babatan"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">Status Akun</label>
+                <select
+                  className="field font-normal text-slate-800"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="Aktif">Aktif</option>
+                  <option value="Nonaktif">Nonaktif</option>
+                </select>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Username *</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Tanggal Terdaftar *</label>
               <input
+                type="date"
                 className="field font-normal text-slate-800"
-                type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={registeredDate}
+                onChange={(e) => setRegisteredDate(e.target.value)}
                 required
               />
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Kata Sandi (Password) *</label>
-              <input
-                className="field font-mono text-slate-800"
-                placeholder="password123"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">No. Telepon / WhatsApp</label>
-              <input
-                className="field font-normal text-slate-800"
-                placeholder="0812-3456-7890"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Nama Toko / Usaha *</label>
-              <input
-                className="field font-normal text-slate-800"
-                placeholder="Contoh: Kedai Kopi Babatan"
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Status Akun</label>
-              <select
-                className="field font-normal text-slate-800"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="Aktif">Aktif</option>
-                <option value="Nonaktif">Nonaktif</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Tanggal Terdaftar *</label>
-            <input
-              type="date"
-              className="field font-normal text-slate-800"
-              value={registeredDate}
-              onChange={(e) => setRegisteredDate(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="mt-4 flex shrink-0 justify-end gap-3 pt-4 border-t border-slate-100">
             <button className="secondary-button" onClick={onClose} type="button">Batal</button>
             <button className="primary-button bg-[#10b981] hover:bg-[#059669] flex items-center justify-center gap-2" type="submit" disabled={isSubmitting}>
               {isSubmitting && (
@@ -1211,9 +1242,9 @@ function AddUserModal({
               {isSubmitting ? "Membuat Akun & UMKM..." : "Buat Akun & Profil UMKM"}
             </button>
           </div>
-        </form>
-      </section>
-    </div>
+      </form>
+    </div>,
+    document.body
   );
 }
 
@@ -1278,10 +1309,14 @@ function ManageWebsiteView({
   }
 
   async function handleAddPrompt(newPrompt: PromptItem) {
-    const updated = [newPrompt, ...promptsList];
-    setPromptsList(updated);
-    await upsertPrompt(newPrompt);
-    triggerToast("✓ Prompt AI baru berhasil ditambahkan ke direktori prompt (/direktori-prompt)!");
+    const res = await upsertPrompt(newPrompt);
+    if (res.success && res.data) {
+      const updated = [res.data, ...promptsList];
+      setPromptsList(updated);
+      triggerToast("✓ Prompt AI baru berhasil ditambahkan ke direktori prompt (/direktori-prompt)!");
+    } else {
+      triggerToast("✗ Gagal menambahkan prompt!");
+    }
   }
 
   async function handleDeletePrompt(id: number) {
@@ -1762,15 +1797,32 @@ function AddPromptModal({
   const [category, setCategory] = useState("FOTO PRODUK");
   const [promptText, setPromptText] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  async function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'prompts');
+
+        const res = await uploadFileToR2(formData);
+        if (res.success && res.publicUrl) {
+          setImage(res.publicUrl);
+        } else {
+          console.error("Gagal mengupload gambar ke R2:", res.error);
+          alert("Gagal mengupload gambar: " + res.error);
+        }
+      } catch (err) {
+        console.error("Kesalahan upload gambar:", err);
+      } finally {
+        setIsUploading(false);
+      }
     }
   }
 
@@ -1788,16 +1840,18 @@ function AddPromptModal({
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
-      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <form onSubmit={handleSubmit} className="relative flex w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-hidden">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <h2 className="text-base font-bold text-slate-900">Tambah Prompt AI Baru</h2>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">
             ✕
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Judul Prompt *</label>
             <input
@@ -1837,14 +1891,16 @@ function AddPromptModal({
               </div>
             ) : (
               <label className="relative rounded-xl border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/30 p-4 flex flex-col items-center justify-center text-center transition-colors cursor-pointer group">
-                <input type="file" accept="image/*" onChange={handleImageFileChange} className="sr-only" />
+                <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleImageFileChange} className="sr-only" />
                 <div className="flex flex-col items-center gap-1 py-2">
                   <div className="h-9 w-9 rounded-full bg-emerald-100/80 text-emerald-600 flex items-center justify-center mb-0.5">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-bold text-slate-700">Klik untuk Mengunggah / Pilih Gambar</p>
+                  <p className="text-sm font-bold text-slate-700">
+                    {isUploading ? "Mengunggah Gambar..." : "Klik untuk Mengunggah / Pilih Gambar"}
+                  </p>
                   <p className="text-sm text-slate-400">PNG, JPG, atau WEBP</p>
                 </div>
               </label>
@@ -1860,13 +1916,14 @@ function AddPromptModal({
               required
             />
           </div>
-          <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button className="secondary-button" onClick={onClose} type="button">Batal</button>
-            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">Simpan Prompt Baru</button>
-          </div>
-        </form>
-      </section>
-    </div>
+        </div>
+        <div className="mt-4 flex shrink-0 justify-end gap-3 pt-4 border-t border-slate-100">
+          <button className="secondary-button" onClick={onClose} type="button">Batal</button>
+          <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">Tambah Prompt</button>
+        </div>
+      </form>
+    </div>,
+    document.body
   );
 }
 
@@ -1882,26 +1939,47 @@ function EditPromptModal({
   const [title, setTitle] = useState(prompt.title);
   const [category, setCategory] = useState(prompt.category);
   const [promptText, setPromptText] = useState(prompt.prompt);
-  const [image, setImage] = useState<string>(prompt.image);
+  const [image, setImage] = useState<string | null>(prompt.image || null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  async function handleImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'prompts');
+
+        const res = await uploadFileToR2(formData);
+        if (res.success && res.publicUrl) {
+          setImage(res.publicUrl);
+        } else {
+          console.error("Gagal mengupload gambar ke R2:", res.error);
+          alert("Gagal mengupload gambar: " + res.error);
+        }
+      } catch (err) {
+        console.error("Kesalahan upload gambar:", err);
+      } finally {
+        setIsUploading(false);
+      }
     }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !promptText) return;
-    onSave({ ...prompt, title, category, prompt: promptText, image });
+    onSave({ ...prompt, title, category, prompt: promptText, image: image || "" });
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
-      <section className="relative my-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-xs">
+      <form onSubmit={handleSubmit} className="relative flex w-full max-w-lg flex-col rounded-xl bg-white p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-hidden">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-900">Edit Prompt AI</h2>
@@ -1909,7 +1987,7 @@ function EditPromptModal({
           </div>
           <button className="icon-button" onClick={onClose} title="Tutup" type="button">✕</button>
         </div>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Judul Prompt *</label>
             <input
@@ -1937,10 +2015,12 @@ function EditPromptModal({
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1.5">Gambar Banner</label>
             <div className="relative h-36 w-full rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-slate-50 mb-2">
-              <img src={image} alt="Preview Banner" className="h-full w-full object-cover" />
-              <label className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                <input type="file" accept="image/*" onChange={handleImageFileChange} className="sr-only" />
-                <span className="rounded-lg bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow">Ganti Gambar</span>
+              <img src={image || ""} alt="Preview Banner" className="h-full w-full object-cover" />
+              <label className={`absolute inset-0 flex items-center justify-center bg-slate-900/40 transition-opacity ${isUploading ? 'opacity-100 cursor-wait' : 'opacity-0 hover:opacity-100 cursor-pointer'}`}>
+                <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleImageFileChange} className="sr-only" disabled={isUploading} />
+                <span className="rounded-lg bg-white/90 px-3 py-1.5 text-sm font-bold text-slate-800 shadow">
+                  {isUploading ? "Mengunggah..." : "Ganti Gambar"}
+                </span>
               </label>
             </div>
             <p className="text-sm text-slate-400">Hover gambar lalu klik untuk mengganti. PNG, JPG, atau WEBP.</p>
@@ -1955,13 +2035,14 @@ function EditPromptModal({
               required
             />
           </div>
-          <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button className="secondary-button" onClick={onClose} type="button">Batal</button>
-            <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">Simpan Perubahan</button>
-          </div>
-        </form>
-      </section>
-    </div>
+        </div>
+        <div className="mt-4 flex shrink-0 justify-end gap-3 pt-4 border-t border-slate-100">
+          <button className="secondary-button" onClick={onClose} type="button">Batal</button>
+          <button className="primary-button bg-[#10b981] hover:bg-[#059669]" type="submit">Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>,
+    document.body
   );
 }
 

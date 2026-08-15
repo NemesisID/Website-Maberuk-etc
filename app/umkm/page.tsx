@@ -45,10 +45,10 @@ export default async function UmkmPage() {
         slug: slug,
         name: umkmName,
         owner: dbUser?.name || defaultUsername,
-        username: defaultUsername,
         category: 'Lainnya',
         address: 'Babatan, Surabaya',
-        active: true
+        active: true,
+        email: user.email
       })
       .select()
       .single();
@@ -62,10 +62,10 @@ export default async function UmkmPage() {
         slug: slug,
         name: umkmName,
         owner: dbUser?.name || defaultUsername,
-        username: defaultUsername,
         category: 'Lainnya',
         address: 'Babatan, Surabaya',
-        active: true
+        active: true,
+        email: user.email
       };
     }
   }

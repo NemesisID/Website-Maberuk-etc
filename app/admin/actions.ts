@@ -101,7 +101,7 @@ export async function uploadFileToR2(formData: FormData) {
       targetUmkmId = user.id;
     }
 
-    if (targetUmkmId) {
+    if (folder !== 'prompts' && targetUmkmId) {
       const { data: existingStore } = await adminSupabase.from('umkm').select('id').eq('id', targetUmkmId).single();
       
       if (!existingStore && user?.id) {
@@ -113,7 +113,6 @@ export async function uploadFileToR2(formData: FormData) {
           slug: slug,
           name: umkmName,
           owner: user.user_metadata?.name || 'Owner',
-          username: user.id,
           category: 'Lainnya',
           address: 'Babatan, Surabaya',
           active: true
@@ -159,19 +158,25 @@ export async function saveSiteContent(key: string, value: any) {
 
 export async function upsertPrompt(prompt: any) {
   const adminSupabase = getAdminClient();
-  const { error } = await adminSupabase.from('prompts').upsert({
-    id: prompt.id,
+  const payload: any = {
     category: prompt.category,
     title: prompt.title,
     prompt: prompt.prompt,
     image: prompt.image,
-    sort_order: prompt.sort_order || prompt.id
-  });
+    sort_order: prompt.sort_order || 0
+  };
+
+  // Ensure we don't pass Date.now() timestamp as a smallint/integer ID
+  if (prompt.id && prompt.id < 1000000000) {
+    payload.id = prompt.id;
+  }
+
+  const { data, error } = await adminSupabase.from('prompts').upsert(payload).select().single();
   if (error) {
     console.error("Error saving prompt:", error);
     return { success: false, error: error.message };
   }
-  return { success: true };
+  return { success: true, data };
 }
 
 export async function deletePrompt(id: number) {
@@ -273,7 +278,8 @@ export async function createNewOwner(data: { name: string; username?: string; em
     phone_digits: data.phone?.replace(/\D/g, '') || '',
     category: 'Lainnya',
     address: 'Babatan, Surabaya',
-    active: data.status === 'Aktif'
+    active: data.status === 'Aktif',
+    email: authEmail
   });
 
   if (umkmError) {

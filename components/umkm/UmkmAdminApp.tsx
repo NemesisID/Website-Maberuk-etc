@@ -115,7 +115,7 @@ export function UmkmAdminApp({
     <div className="min-h-screen bg-[#f6f7f8] text-slate-950">
       {/* Desktop Sidebar (Left) */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-[210px] border-r border-slate-200/80 bg-white md:flex md:flex-col">
-        <BrandBlock shopLogo={shopLogo} shopName={umkmData?.name || "UMKM"} />
+        <BrandBlock shopLogo={shopLogo} shopName={ownerName} />
         <nav className="flex flex-1 flex-col gap-2 px-4 py-5">
           {umkmNavItems.map((item) => (
             <button
@@ -146,7 +146,7 @@ export function UmkmAdminApp({
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <LogoMark src={shopLogo} />
-          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{umkmData?.name || "UMKM Console"}</h1>
+          <h1 className="text-base font-bold text-slate-900 tracking-wide truncate max-w-[180px] sm:max-w-none">{ownerName}</h1>
         </div>
         <form action="/api/auth/logout" method="POST">
           <button
@@ -372,7 +372,7 @@ function BrandBlock({ shopLogo, shopName }: { shopLogo?: string | null, shopName
       <LogoMark src={shopLogo} />
       <div>
         <p className="text-left text-sm font-bold leading-tight text-slate-900 tracking-wide">{shopName}</p>
-        <p className="text-left text-sm font-medium leading-tight text-slate-400 mt-0.5">UMKM Console</p>
+        <p className="text-left text-sm font-medium leading-tight text-slate-400 mt-0.5">Dashboard UMKM</p>
       </div>
     </div>
   );
@@ -1022,7 +1022,7 @@ function ProfileView({
           <label className="relative group grid h-20 w-20 shrink-0 place-items-center rounded-full bg-slate-100 border-2 border-dashed border-slate-300 hover:border-emerald-500 shadow-inner cursor-pointer overflow-hidden transition-all">
             <input
               type="file"
-              accept="image/*"
+              accept="image/png, image/jpeg, image/webp"
               className="hidden"
               onChange={handleLogoChange}
               disabled={isUploading}
@@ -1314,7 +1314,7 @@ function ProfileView({
               >
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/png, image/jpeg, image/webp"
                   className="hidden"
                   onChange={handleGalleryUpload}
                   disabled={isUploadingGallery}
@@ -1427,39 +1427,6 @@ function ProfileView({
         >
           {isSaving ? "Menyimpan..." : "Simpan Perubahan Profil"}
         </button>
-      </div>
-    </div>
-  );
-}
-
-function TimeRow({ 
-  label, 
-  start, 
-  end,
-  onChangeStart,
-  onChangeEnd
-}: { 
-  label: string; 
-  start: string; 
-  end: string;
-  onChangeStart: (val: string) => void;
-  onChangeEnd: (val: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="font-semibold text-slate-700 text-sm sm:text-sm">{label}</span>
-      <div className="flex items-center gap-2">
-        <input 
-          className="field w-20 text-center text-sm py-1.5 px-2 font-medium" 
-          value={start} 
-          onChange={(e) => onChangeStart(e.target.value)}
-        />
-        <span className="text-sm text-slate-400 font-medium">s/d</span>
-        <input 
-          className="field w-20 text-center text-sm py-1.5 px-2 font-medium" 
-          value={end} 
-          onChange={(e) => onChangeEnd(e.target.value)}
-        />
       </div>
     </div>
   );
