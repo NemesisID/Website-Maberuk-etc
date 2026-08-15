@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client } from '@/lib/r2';
 
@@ -148,8 +148,8 @@ export async function uploadFileToR2(formData: FormData) {
 }
 
 export async function saveSiteContent(key: string, value: any) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('site_content').upsert({ key, value });
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('site_content').upsert({ key, value });
   if (error) {
     console.error("Error saving site content:", error);
     return { success: false, error: error.message };
@@ -158,8 +158,8 @@ export async function saveSiteContent(key: string, value: any) {
 }
 
 export async function upsertPrompt(prompt: any) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('prompts').upsert({
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('prompts').upsert({
     id: prompt.id,
     category: prompt.category,
     title: prompt.title,
@@ -175,8 +175,8 @@ export async function upsertPrompt(prompt: any) {
 }
 
 export async function deletePrompt(id: number) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('prompts').delete().eq('id', id);
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('prompts').delete().eq('id', id);
   if (error) {
     console.error("Error deleting prompt:", error);
     return { success: false, error: error.message };
@@ -185,8 +185,8 @@ export async function deletePrompt(id: number) {
 }
 
 export async function upsertUser(user: any) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('users').upsert(user);
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('users').upsert(user);
   if (error) {
     console.error("Error saving user:", error);
     return { success: false, error: error.message };
@@ -195,8 +195,8 @@ export async function upsertUser(user: any) {
 }
 
 export async function deleteUser(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('users').delete().eq('id', id);
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('users').delete().eq('id', id);
   if (error) {
     console.error("Error deleting user:", error);
     return { success: false, error: error.message };
@@ -205,8 +205,8 @@ export async function deleteUser(id: string) {
 }
 
 export async function upsertCategory(category: any) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('categories').upsert(category);
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('categories').upsert(category);
   if (error) {
     console.error("Error saving category:", error);
     return { success: false, error: error.message };
@@ -216,8 +216,8 @@ export async function upsertCategory(category: any) {
 }
 
 export async function deleteCategory(id: number) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('categories').delete().eq('id', id);
+  const adminSupabase = getAdminClient();
+  const { error } = await adminSupabase.from('categories').delete().eq('id', id);
   if (error) {
     console.error("Error deleting category:", error);
     return { success: false, error: error.message };
@@ -269,7 +269,6 @@ export async function createNewOwner(data: { name: string; username?: string; em
     slug: slug,
     name: umkmName,
     owner: data.name,
-    username: usernameVal,
     phone: data.phone || '—',
     phone_digits: data.phone?.replace(/\D/g, '') || '',
     category: 'Lainnya',
@@ -313,23 +312,55 @@ export async function deleteUmkmStore(id: string) {
   return { success: true };
 }
 
+export async function deleteFileFromR2(fileUrlOrKey: string) {
+  if (!fileUrlOrKey) return { success: false, error: 'URL/Key tidak valid' };
+
+  try {
+    let fileKey = fileUrlOrKey;
+    if (fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://')) {
+      try {
+        const urlObj = new URL(fileUrlOrKey);
+        fileKey = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname;
+      } catch {
+        fileKey = fileUrlOrKey;
+      }
+    }
+
+    const command = new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: fileKey,
+    });
+
+    await r2Client.send(command);
+
+    // Also delete record in Supabase umkm_images table
+    const adminSupabase = getAdminClient();
+    await adminSupabase.from('umkm_images').delete().eq('url', fileUrlOrKey);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting file from R2:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateUmkmProfile(umkmId: string, data: any) {
-  const supabase = await createClient();
+  const adminSupabase = getAdminClient();
   if (data.name) {
     data.slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   }
   
-  const heroImage = data.hero_image;
+  const heroImage = data.hero_image !== undefined ? data.hero_image : undefined;
   delete data.logo_url;
 
-  const { error } = await supabase.from('umkm').upsert({ id: umkmId, ...data });
+  const { error } = await adminSupabase.from('umkm').upsert({ id: umkmId, ...data });
   if (error) {
     console.error("Error updating UMKM profile:", error);
     return { success: false, error: error.message };
   }
 
-  if (heroImage) {
-    await supabase.from('users').update({ avatar: heroImage }).eq('id', umkmId);
+  if (heroImage !== undefined) {
+    await adminSupabase.from('users').update({ avatar: heroImage }).eq('id', umkmId);
   }
 
   return { success: true };

@@ -10,7 +10,7 @@ import {
   UmkmNavIcon,
 } from "@/components/icons/Icons";
 import type { UmkmView } from "@/types";
-import { updateUmkmProfile, upsertTransaction, deleteTransaction, getUploadUrl, uploadFileToR2 } from "@/app/admin/actions";
+import { updateUmkmProfile, upsertTransaction, deleteTransaction, getUploadUrl, uploadFileToR2, deleteFileFromR2 } from "@/app/admin/actions";
 
 export function UmkmAdminApp({ 
   user, 
@@ -306,6 +306,66 @@ export function UmkmAdminApp({
   );
 }
 
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  confirmText = "Hapus",
+  cancelText = "Batal",
+  onConfirm,
+  onCancel,
+  isDanger = true
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDanger?: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <div className="relative my-auto w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl space-y-4 text-center">
+        <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${isDanger ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+          {isDanger ? (
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          ) : (
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+          <p className="mt-1 text-sm text-slate-500">{message}</p>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            className="secondary-button flex-1"
+            onClick={onCancel}
+            type="button"
+          >
+            {cancelText}
+          </button>
+          <button
+            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-sm ${isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+            onClick={onConfirm}
+            type="button"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BrandBlock({ shopLogo, shopName }: { shopLogo?: string | null, shopName?: string }) {
   return (
     <div className="brand-block" title="Dashboard UMKM">
@@ -479,14 +539,21 @@ function BookkeepingView({
       .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [transactionsList]);
 
-  async function handleDeleteTransaction(id: string) {
-    if (confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
-      const res = await deleteTransaction(id);
-      if (res.success) {
-        setTransactionsList(prev => prev.filter(t => t.id !== id));
-      } else {
-        console.error("Gagal menghapus transaksi: " + res.error);
-      }
+  const [deleteTransId, setDeleteTransId] = useState<string | null>(null);
+
+  function handleDeleteTransaction(id: string) {
+    setDeleteTransId(id);
+  }
+
+  async function confirmDeleteTransaction() {
+    if (!deleteTransId) return;
+    const id = deleteTransId;
+    setDeleteTransId(null);
+    const res = await deleteTransaction(id);
+    if (res.success) {
+      setTransactionsList(prev => prev.filter(t => t.id !== id));
+    } else {
+      console.error("Gagal menghapus transaksi: " + res.error);
     }
   }
 
@@ -538,6 +605,14 @@ function BookkeepingView({
           onEdit={handleEditTransaction}
         />
       </section>
+
+      <ConfirmModal
+        isOpen={!!deleteTransId}
+        title="Hapus Transaksi"
+        message="Apakah Anda yakin ingin menghapus catatan transaksi ini?"
+        onConfirm={confirmDeleteTransaction}
+        onCancel={() => setDeleteTransId(null)}
+      />
     </div>
   );
 }
@@ -770,17 +845,13 @@ function ProfileView({
   const [waNumber, setWaNumber] = useState(umkmData?.phone || "");
   const [description, setDescription] = useState(umkmData?.description || "");
   const [category, setCategory] = useState(umkmData?.category || "Lainnya");
+  const [subCategory, setSubCategory] = useState(umkmData?.sub_category || "");
   const [shopAddress, setShopAddress] = useState(umkmData?.address || "");
   const [mapQuery, setMapQuery] = useState(umkmData?.gps_coords || umkmData?.address || "");
   
   const [igAccount, setIgAccount] = useState(umkmData?.social?.instagram || "");
   const [fbPage, setFbPage] = useState(umkmData?.social?.facebook || "");
   const [tiktokAccount, setTiktokAccount] = useState(umkmData?.social?.tiktok || "");
-
-  const [weekdaysStart, setWeekdaysStart] = useState(umkmData?.operational_hours?.weekdaysStart || "08:00");
-  const [weekdaysEnd, setWeekdaysEnd] = useState(umkmData?.operational_hours?.weekdaysEnd || "21:00");
-  const [weekendsStart, setWeekendsStart] = useState(umkmData?.operational_hours?.weekendsStart || "09:00");
-  const [weekendsEnd, setWeekendsEnd] = useState(umkmData?.operational_hours?.weekendsEnd || "22:00");
 
   const [isLocating, setIsLocating] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<string | null>(umkmData?.gps_coords || null);
@@ -796,19 +867,25 @@ function ProfileView({
 
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file && umkmData?.id) {
+    if (file && (umkmData?.id || user?.id)) {
+      const targetId = umkmData?.id || user?.id;
       setIsUploading(true);
       
       try {
+        const oldLogo = shopLogo;
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', `logos/${umkmData.id}`);
+        formData.append('folder', `logos/${targetId}`);
+        formData.append('umkmId', targetId);
 
         const res = await uploadFileToR2(formData);
         
         if (res.success && res.publicUrl) {
           setShopLogo(res.publicUrl);
-          await updateUmkmProfile(umkmData.id, { logo_url: res.publicUrl, hero_image: res.publicUrl });
+          await updateUmkmProfile(targetId, { logo_url: res.publicUrl, hero_image: res.publicUrl });
+          if (oldLogo && oldLogo !== res.publicUrl) {
+            deleteFileFromR2(oldLogo).catch(console.error);
+          }
         } else if (res.error) {
           console.error("Gagal mengupload logo ke R2: " + res.error);
         }
@@ -820,21 +897,36 @@ function ProfileView({
     }
   }
 
+  async function handleRemoveLogo() {
+    if (!shopLogo) return;
+    const oldLogo = shopLogo;
+    setShopLogo(null);
+    const targetId = umkmData?.id || user?.id;
+    if (targetId) {
+      await updateUmkmProfile(targetId, { logo_url: null, hero_image: null });
+      await deleteFileFromR2(oldLogo).catch(console.error);
+    }
+  }
+
   async function handleGalleryUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file && umkmData?.id) {
+    if (file && (umkmData?.id || user?.id)) {
+      const targetId = umkmData?.id || user?.id;
       setIsUploadingGallery(true);
       
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', `gallery/${umkmData.id}`);
+        formData.append('folder', `gallery/${targetId}`);
+        formData.append('umkmId', targetId);
 
         const res = await uploadFileToR2(formData);
         
         if (res.success && res.publicUrl) {
           const newPhoto = { src: res.publicUrl, caption: file.name.split('.')[0] || 'Foto Produk' };
-          setGalleryList(prev => [...prev, newPhoto]);
+          const updated = [...galleryList, newPhoto];
+          setGalleryList(updated);
+          await updateUmkmProfile(targetId, { gallery: updated });
         } else if (res.error) {
           console.error("Gagal mengupload foto ke R2: " + res.error);
         }
@@ -846,8 +938,17 @@ function ProfileView({
     }
   }
 
-  function handleRemovePhoto(index: number) {
-    setGalleryList(prev => prev.filter((_, i) => i !== index));
+  async function handleRemovePhoto(index: number) {
+    const photo = galleryList[index];
+    const updated = galleryList.filter((_, i) => i !== index);
+    setGalleryList(updated);
+    const targetId = umkmData?.id || user?.id;
+    if (targetId) {
+      await updateUmkmProfile(targetId, { gallery: updated });
+    }
+    if (photo?.src) {
+      deleteFileFromR2(photo.src).catch(console.error);
+    }
   }
 
   function handleShareLocation() {
@@ -891,6 +992,7 @@ function ProfileView({
       name,
       owner,
       category,
+      sub_category: subCategory,
       phone: waNumber,
       phone_digits: waNumber.replace(/\D/g, ''),
       description,
@@ -899,12 +1001,6 @@ function ProfileView({
         instagram: igAccount,
         facebook: fbPage,
         tiktok: tiktokAccount
-      },
-      operational_hours: {
-        weekdaysStart,
-        weekdaysEnd,
-        weekendsStart,
-        weekendsEnd
       },
       gps_coords: gpsCoords || mapQuery,
       gallery: galleryList,
@@ -959,6 +1055,19 @@ function ProfileView({
             <p className="mt-1 text-sm text-slate-500 font-normal">
               {isUploading ? "Sedang mengunggah logo..." : "Klik gambar logo di sebelah kiri untuk mengunggah atau mengganti logo toko."}
             </p>
+            {shopLogo && (
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                disabled={isUploading}
+                className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Hapus Logo
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -1004,6 +1113,18 @@ function ProfileView({
                     <option key={i} value={c}>{c}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                  Detail Kategori / Sub-kategori <span className="text-slate-400 font-normal">(Contoh: Craft, Souvenir, Kue Basah)</span>
+                </label>
+                <input 
+                  className="field font-normal text-slate-800" 
+                  placeholder="Contoh: Craft Kayu, Sablon Kaos, Aksesoris"
+                  value={subCategory} 
+                  onChange={(e) => setSubCategory(e.target.value)} 
+                />
               </div>
 
               <div>
@@ -1212,14 +1333,6 @@ function ProfileView({
         </div>
 
         <div className="space-y-6">
-          <section className="panel p-6">
-            <h2 className="mb-5 text-base font-bold text-slate-900">Jam Operasional Toko</h2>
-            <div className="space-y-4">
-              <TimeRow label="Senin - Jumat" start={weekdaysStart} end={weekdaysEnd} onChangeStart={setWeekdaysStart} onChangeEnd={setWeekdaysEnd} />
-              <TimeRow label="Sabtu - Minggu" start={weekendsStart} end={weekendsEnd} onChangeStart={setWeekendsStart} onChangeEnd={setWeekendsEnd} />
-            </div>
-          </section>
-
           <section className="panel p-6">
             <h2 className="mb-5 text-base font-bold text-slate-900">Sosial Media & Kontak</h2>
             <div className="space-y-4">

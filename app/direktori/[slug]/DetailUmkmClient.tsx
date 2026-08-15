@@ -208,9 +208,16 @@ export default function DetailUmkmClient({ umkm }: { umkm: any }) {
               unoptimized
               priority
             />
-            <span className="absolute top-4 left-4 bg-white/90 backdrop-blur text-xs font-semibold text-green-700 px-3 py-1 rounded-full shadow-sm">
-              {umkm.category}
-            </span>
+            <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
+              <span className="bg-white/95 backdrop-blur text-xs font-bold text-green-700 px-3 py-1 rounded-full shadow-sm">
+                {umkm.category}
+              </span>
+              {umkm.sub_category && (
+                <span className="bg-slate-900/80 backdrop-blur text-xs font-semibold text-white px-3 py-1 rounded-full shadow-sm">
+                  {umkm.sub_category}
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Info panel */}

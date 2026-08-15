@@ -156,7 +156,7 @@ export function SuperAdminApp({
 
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 md:px-8 overflow-x-hidden">
           <div key={activeView} className="view-transition">
-            {activeView === "dashboard" && <SuperDashboardView umkmList={sharedUmkmList} />}
+            {activeView === "dashboard" && <SuperDashboardView umkmList={sharedUmkmList} usersList={initialUsersList} />}
             {activeView === "umkm" && (
               <ManageUmkmView
                 accountsList={sharedUmkmList}
@@ -242,38 +242,154 @@ function MetricCard({
   );
 }
 
-function SuperDashboardView({ umkmList }: { umkmList: any[] }) {
-  // Use dummy data if list is empty to ensure the dashboard always looks populated
-  const displayUmkmCount = umkmList.length > 0 ? umkmList.length : 124;
-  
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  confirmText = "Hapus",
+  cancelText = "Batal",
+  onConfirm,
+  onCancel,
+  isDanger = true
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDanger?: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-xs flex items-center justify-center min-h-full">
+      <div className="relative my-auto w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl space-y-4 text-center">
+        <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${isDanger ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+          {isDanger ? (
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          ) : (
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+          <p className="mt-1 text-sm text-slate-500">{message}</p>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            className="secondary-button flex-1"
+            onClick={onCancel}
+            type="button"
+          >
+            {cancelText}
+          </button>
+          <button
+            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold text-white transition-colors shadow-sm ${isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+            onClick={onConfirm}
+            type="button"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuperDashboardView({ umkmList, usersList = [] }: { umkmList: any[]; usersList?: any[] }) {
+  const displayUmkmCount = umkmList.length;
+  const activeUsersCount = useMemo(() => {
+    if (usersList && usersList.length > 0) {
+      return usersList.filter((u: any) => u.status !== "Nonaktif").length;
+    }
+    return umkmList.length;
+  }, [usersList, umkmList]);
+
+  // Monthly growth calculation based on created_at in umkmList
+  const monthlyData = useMemo(() => {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const counts = Array(12).fill(0);
+    umkmList.forEach((item) => {
+      if (item.created_at) {
+        const d = new Date(item.created_at);
+        if (!isNaN(d.getTime())) {
+          counts[d.getMonth()]++;
+        }
+      }
+    });
+    const totalRecorded = counts.reduce((a, b) => a + b, 0);
+    if (totalRecorded === 0) {
+      return superMonthlyUmkm;
+    }
+    return months.map((month, idx) => ({
+      month,
+      value: counts[idx]
+    }));
+  }, [umkmList]);
+
+  // Category distribution calculation
+  const categoryData = useMemo(() => {
+    const total = umkmList.length || 1;
+    const catMap: Record<string, number> = {};
+    umkmList.forEach((item) => {
+      const cat = item.category || 'Lainnya';
+      catMap[cat] = (catMap[cat] || 0) + 1;
+    });
+
+    const knownCategories = ["Makanan & Minuman", "Fashion & Pakaian", "Kerajinan Tangan", "Jasa & Servis", "Lainnya"];
+    const tones: Array<"green" | "blue" | "yellow" | "purple"> = ["green", "blue", "yellow", "purple", "green"];
+
+    return knownCategories.map((label, idx) => {
+      const count = catMap[label] || 0;
+      const pct = Math.round((count / total) * 100);
+      return {
+        label,
+        value: `${pct}% (${count})`,
+        width: `${pct}%`,
+        tone: tones[idx % tones.length]
+      };
+    });
+  }, [umkmList]);
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <MetricCard label="Total UMKM Terdaftar" value={`${displayUmkmCount} Usaha`} trend="+12% bulan ini" tone="green" />
-        <MetricCard label="Total Pengguna Aktif" value="1,492 User" trend="+8% bulan ini" tone="blue" />
+        <MetricCard label="Total UMKM Terdaftar" value={`${displayUmkmCount} Usaha`} trend={`+${displayUmkmCount} usaha aktif`} tone="green" />
+        <MetricCard label="Total Pengguna Aktif" value={`${activeUsersCount} User`} trend={`+${activeUsersCount} pengguna aktif`} tone="blue" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        <section className="panel">
-          <div className="section-title">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <section className="panel p-5">
+          <div className="section-title px-0 pt-0">
             <h2>Pertumbuhan UMKM 2026</h2>
             <div className="flex gap-4">
               <span className="legend-dot">Target</span>
               <span className="legend-dot red">Aktual</span>
             </div>
           </div>
-          <BarChart data={superMonthlyUmkm} tone="green" />
+          <BarChart data={monthlyData} tone="green" />
         </section>
 
-        <section className="panel">
-          <div className="section-title">
+        <section className="panel p-5">
+          <div className="section-title px-0 pt-0">
             <h2>Distribusi Kategori</h2>
           </div>
-          <div className="p-5 flex flex-col gap-2">
-            <DistributionRow label="Makanan & Minuman" value="45%" width="45%" tone="green" />
-            <DistributionRow label="Fashion & Pakaian" value="25%" width="25%" tone="blue" />
-            <DistributionRow label="Kerajinan Tangan" value="20%" width="20%" tone="yellow" />
-            <DistributionRow label="Lainnya" value="10%" width="10%" tone="purple" />
+          <div className="flex flex-col gap-2 pt-2">
+            {categoryData.map((item) => (
+              <DistributionRow 
+                key={item.label} 
+                label={item.label} 
+                value={item.value} 
+                width={item.width} 
+                tone={item.tone} 
+              />
+            ))}
           </div>
         </section>
       </div>
@@ -367,17 +483,24 @@ function ManageUmkmView({
   const visibleSelected =
     filteredAccounts.find((account) => account.name === selected?.name) ?? filteredAccounts[0] ?? selected;
 
-  async function handleDeleteUmkm(targetName: string) {
-    if (confirm(`Apakah Anda yakin ingin menghapus toko UMKM "${targetName}"?`)) {
-      const targetAcc = accountsList.find(a => a.name === targetName);
-      if (targetAcc && (targetAcc as any).id) {
-        await deleteUmkmStore((targetAcc as any).id);
-      }
-      const updated = accountsList.filter((acc) => acc.name !== targetName);
-      setAccountsList(updated);
-      if (selected?.name === targetName) {
-        setSelected(updated[0] ?? accountsList[0]);
-      }
+  const [deleteTargetName, setDeleteTargetName] = useState<string | null>(null);
+
+  function handleDeleteUmkm(targetName: string) {
+    setDeleteTargetName(targetName);
+  }
+
+  async function confirmDeleteUmkm() {
+    if (!deleteTargetName) return;
+    const targetName = deleteTargetName;
+    setDeleteTargetName(null);
+    const targetAcc = accountsList.find(a => a.name === targetName);
+    if (targetAcc && (targetAcc as any).id) {
+      await deleteUmkmStore((targetAcc as any).id);
+    }
+    const updated = accountsList.filter((acc) => acc.name !== targetName);
+    setAccountsList(updated);
+    if (selected?.name === targetName) {
+      setSelected(updated[0] ?? accountsList[0]);
     }
   }
 
@@ -541,6 +664,13 @@ function ManageUmkmView({
         </section>
       )}
 
+      <ConfirmModal
+        isOpen={!!deleteTargetName}
+        title="Hapus Toko UMKM"
+        message={`Apakah Anda yakin ingin menghapus toko UMKM "${deleteTargetName || ''}"?`}
+        onConfirm={confirmDeleteUmkm}
+        onCancel={() => setDeleteTargetName(null)}
+      />
     </div>
   );
 }
@@ -574,11 +704,18 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
     await upsertUser(updatedUser);
   }
 
-  async function handleDeleteUser(id: string) {
-    if (confirm("Apakah Anda yakin ingin menghapus pengguna ini?")) {
-      setUsersList(usersList.filter((u) => u.id !== id));
-      await deleteUserAction(id);
-    }
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+
+  function handleDeleteUser(id: string) {
+    setDeleteUserId(id);
+  }
+
+  async function confirmDeleteUser() {
+    if (!deleteUserId) return;
+    const id = deleteUserId;
+    setDeleteUserId(null);
+    setUsersList(usersList.filter((u) => u.id !== id));
+    await deleteUserAction(id);
   }
 
   async function handleAddUser(newUser: any, autoUmkm: UmkmAccount) {
@@ -806,6 +943,14 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
           }}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteUserId}
+        title="Hapus Pengguna"
+        message="Apakah Anda yakin ingin menghapus pengguna ini secara permanen?"
+        onConfirm={confirmDeleteUser}
+        onCancel={() => setDeleteUserId(null)}
+      />
     </div>
   );
 }

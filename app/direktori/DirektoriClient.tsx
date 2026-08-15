@@ -72,17 +72,35 @@ function ChevronDown() {
 
 const ITEMS_PER_PAGE = 12;
 
-export default function DirektoriClient({ initialUmkmList, categories = [] }: { initialUmkmList: any[], categories?: string[] }) {
-  const [searchValue, setSearchValue] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
-  const [sortBy, setSortBy] = useState("Default");
+export default function DirektoriClient({ 
+  initialUmkmList, 
+  categories = [],
+  initialSearch = "",
+  initialCategory = "Semua Kategori",
+  initialSort = "Default"
+}: { 
+  initialUmkmList: any[]; 
+  categories?: string[];
+  initialSearch?: string;
+  initialCategory?: string;
+  initialSort?: string;
+}) {
+  const [searchValue, setSearchValue] = useState(initialSearch);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [sortBy, setSortBy] = useState(initialSort);
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredStores = useMemo(() => {
     let result = [...initialUmkmList];
 
     if (searchValue.trim()) {
-      result = result.filter((s) => s.name.toLowerCase().includes(searchValue.toLowerCase()));
+      const q = searchValue.toLowerCase();
+      result = result.filter((s) => 
+        s.name?.toLowerCase().includes(q) ||
+        s.sub_category?.toLowerCase().includes(q) ||
+        s.category?.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q)
+      );
     }
     if (selectedCategory !== "Semua Kategori") {
       result = result.filter((s) => s.category === selectedCategory);
@@ -94,7 +112,7 @@ export default function DirektoriClient({ initialUmkmList, categories = [] }: { 
     }
 
     return result;
-  }, [searchValue, selectedCategory, sortBy]);
+  }, [searchValue, selectedCategory, sortBy, initialUmkmList]);
 
   const totalPages = Math.max(1, Math.ceil(filteredStores.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
@@ -142,7 +160,7 @@ export default function DirektoriClient({ initialUmkmList, categories = [] }: { 
                 type="text"
                 value={searchValue}
                 onChange={(e) => handleFilterChange(() => setSearchValue(e.target.value))}
-                placeholder="Cari nama toko UMKM..."
+                placeholder="Cari nama toko, subkategori, atau deskripsi..."
                 className="w-full pl-9 pr-4 py-2.5 text-sm rounded-lg border border-gray-200 bg-white outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
               />
             </div>
@@ -203,7 +221,12 @@ export default function DirektoriClient({ initialUmkmList, categories = [] }: { 
                     <Image src={getValidStoreImage(store)} alt={store.name || 'UMKM'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
                   </div>
                   <div className="px-3 py-2.5 bg-white">
-                    <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">{store.category}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                      <span className="text-[10px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-wide">{store.category}</span>
+                      {store.sub_category && (
+                        <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full truncate max-w-[120px]">{store.sub_category}</span>
+                      )}
+                    </div>
                     <p className="text-sm font-semibold text-gray-800 group-hover:text-green-600 transition-colors mt-0.5">{store.name}</p>
                   </div>
                 </Link>
