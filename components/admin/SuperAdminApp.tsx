@@ -20,7 +20,8 @@ import {
   TrashIcon,
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
-import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore, uploadFileToR2 } from "@/app/admin/actions";
+import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore } from "@/app/admin/actions";
+import { uploadImageFile } from "@/lib/upload";
 
 export function SuperAdminApp({ 
   user, 
@@ -1811,7 +1812,7 @@ function AddPromptModal({
         formData.append('file', file);
         formData.append('folder', 'prompts');
 
-        const res = await uploadFileToR2(formData);
+        const res = await uploadImageFile(formData);
         if (res.success && res.publicUrl) {
           setImage(res.publicUrl);
         } else {
@@ -1954,7 +1955,7 @@ function EditPromptModal({
         formData.append('file', file);
         formData.append('folder', 'prompts');
 
-        const res = await uploadFileToR2(formData);
+        const res = await uploadImageFile(formData);
         if (res.success && res.publicUrl) {
           setImage(res.publicUrl);
         } else {

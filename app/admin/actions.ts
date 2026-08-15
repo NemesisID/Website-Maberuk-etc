@@ -102,7 +102,7 @@ export async function uploadFileToR2(formData: FormData) {
     }
 
     if (folder !== 'prompts' && targetUmkmId) {
-      const { data: existingStore } = await adminSupabase.from('umkm').select('id').eq('id', targetUmkmId).single();
+      const { data: existingStore } = await adminSupabase.from('umkm').select('id').eq('id', targetUmkmId).maybeSingle();
       
       if (!existingStore && user?.id) {
         const umkmName = `Toko ${user.user_metadata?.name || 'UMKM'}`;

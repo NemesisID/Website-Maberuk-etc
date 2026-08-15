@@ -10,7 +10,8 @@ import {
   UmkmNavIcon,
 } from "@/components/icons/Icons";
 import type { UmkmView } from "@/types";
-import { updateUmkmProfile, upsertTransaction, deleteTransaction, getUploadUrl, uploadFileToR2, deleteFileFromR2 } from "@/app/admin/actions";
+import { updateUmkmProfile, upsertTransaction, deleteTransaction, getUploadUrl, deleteFileFromR2 } from "@/app/admin/actions";
+import { uploadImageFile } from "@/lib/upload";
 
 export function UmkmAdminApp({ 
   user, 
@@ -878,7 +879,7 @@ function ProfileView({
         formData.append('folder', `logos/${targetId}`);
         formData.append('umkmId', targetId);
 
-        const res = await uploadFileToR2(formData);
+        const res = await uploadImageFile(formData);
         
         if (res.success && res.publicUrl) {
           setShopLogo(res.publicUrl);
@@ -920,7 +921,7 @@ function ProfileView({
         formData.append('folder', `gallery/${targetId}`);
         formData.append('umkmId', targetId);
 
-        const res = await uploadFileToR2(formData);
+        const res = await uploadImageFile(formData);
         
         if (res.success && res.publicUrl) {
           const newPhoto = { src: res.publicUrl, caption: file.name.split('.')[0] || 'Foto Produk' };
