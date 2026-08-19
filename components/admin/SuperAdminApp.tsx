@@ -20,7 +20,7 @@ import {
   TrashIcon,
 } from "@/components/icons/Icons";
 import type { PromptItem, SuperView, UmkmAccount, UserItem } from "@/types";
-import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore } from "@/app/admin/actions";
+import { saveSiteContent, upsertPrompt, deletePrompt, upsertUser, deleteUser as deleteUserAction, upsertCategory, deleteCategory, createNewOwner, resetUserPassword, deleteUmkmStore, toggleUmkmStatus } from "@/app/admin/actions";
 import { uploadImageFile } from "@/lib/upload";
 
 export function SuperAdminApp({ 
@@ -167,7 +167,19 @@ export function SuperAdminApp({
             )}
             {activeView === "website" && <ManageWebsiteView initialPromptsList={initialPromptsList} initialContentList={initialContentList} initialCategoriesList={initialCategoriesList} initialUmkmList={sharedUmkmList} />}
             {activeView === "users" && (
-              <ManageUsersView initialUsersList={initialUsersList} onAddUmkm={(u) => setSharedUmkmList((prev) => [u, ...prev])} />
+              <ManageUsersView
+                initialUsersList={initialUsersList}
+                onAddUmkm={(u) => setSharedUmkmList((prev) => [u, ...prev])}
+                onToggleUserStatus={(userId, newStatus) => {
+                  setSharedUmkmList((prev) =>
+                    prev.map((item) =>
+                      item.id === userId || item.owner === userId
+                        ? { ...item, status: newStatus, active: newStatus === "Aktif" }
+                        : item
+                    )
+                  );
+                }}
+              />
             )}
           </div>
 
@@ -555,6 +567,27 @@ function ManageUmkmView({
     }
   }
 
+  async function handleToggleUmkmStatus(acc: any) {
+    const currentStatus = getItemStatus(acc);
+    const newStatus: "Aktif" | "Nonaktif" = currentStatus === "Aktif" ? "Nonaktif" : "Aktif";
+    const newActive = newStatus === "Aktif";
+
+    const updated: UmkmAccount[] = accountsList.map((item) => {
+      if (item.name === acc.name || (item as any).id === acc.id) {
+        return { ...item, status: newStatus };
+      }
+      return item;
+    });
+    setAccountsList(updated);
+    if (selected?.name === acc.name) {
+      setSelected({ ...selected, status: newStatus });
+    }
+
+    if (acc.id) {
+      await toggleUmkmStatus(acc.id, newActive);
+    }
+  }
+
   return (
     <div className="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
       <section className="panel overflow-hidden">
@@ -745,16 +778,31 @@ function ManageUmkmView({
             <DetailRow label="Alamat" value={visibleSelected.address} />
             <DetailRow label="Produk Terdaftar" value={`${visibleSelected.products} produk`} />
             <DetailRow label="Pemasukan Bulan Ini" value={visibleSelected.revenue} />
-            <DetailRow label="Tanggal Daftar" value={visibleSelected.joined} />
           </div>
-          <button
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-100 transition-colors"
-            onClick={() => handleDeleteUmkm(visibleSelected.name)}
-            type="button"
-          >
-            <TrashIcon />
-            Hapus UMKM
-          </button>
+          <div className="mt-5 flex flex-col gap-2">
+            <button
+              className={`flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-bold transition-colors ${
+                getItemStatus(visibleSelected) === "Aktif"
+                  ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              }`}
+              onClick={() => handleToggleUmkmStatus(visibleSelected)}
+              type="button"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              {getItemStatus(visibleSelected) === "Aktif" ? "Nonaktifkan Toko" : "Aktifkan Toko"}
+            </button>
+            <button
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-100 transition-colors"
+              onClick={() => handleDeleteUmkm(visibleSelected.name)}
+              type="button"
+            >
+              <TrashIcon />
+              Hapus UMKM
+            </button>
+          </div>
         </section>
       )}
 
@@ -778,7 +826,15 @@ function formatIndonesianDate(dateStr: string) {
 
 
 
-function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: any[], onAddUmkm: (umkm: any) => void }) {
+function ManageUsersView({ 
+  initialUsersList, 
+  onAddUmkm,
+  onToggleUserStatus
+}: { 
+  initialUsersList: any[]; 
+  onAddUmkm: (umkm: any) => void;
+  onToggleUserStatus?: (userId: string, newStatus: string) => void;
+}) {
   const [usersList, setUsersList] = useState<any[]>(initialUsersList);
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -807,9 +863,11 @@ function ManageUsersView({ initialUsersList, onAddUmkm }: { initialUsersList: an
   async function toggleStatus(id: string) {
     const userToUpdate = usersList.find((u) => u.id === id);
     if (!userToUpdate) return;
-    const updatedUser = { ...userToUpdate, status: userToUpdate.status === "Aktif" ? "Nonaktif" : "Aktif" };
+    const newStatus = userToUpdate.status === "Aktif" ? "Nonaktif" : "Aktif";
+    const updatedUser = { ...userToUpdate, status: newStatus };
     
     setUsersList(usersList.map((u) => u.id === id ? updatedUser : u));
+    onToggleUserStatus?.(id, newStatus);
     await upsertUser(updatedUser);
   }
 

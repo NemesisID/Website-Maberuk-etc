@@ -191,11 +191,47 @@ export async function deletePrompt(id: number) {
 
 export async function upsertUser(user: any) {
   const adminSupabase = getAdminClient();
-  const { error } = await adminSupabase.from('users').upsert(user);
-  if (error) {
-    console.error("Error saving user:", error);
-    return { success: false, error: error.message };
+  const newStatus = user.status || 'Aktif';
+  const isActive = newStatus === 'Aktif';
+
+  if (user.id) {
+    // 1. Update status in users table
+    const { error: userError } = await adminSupabase
+      .from('users')
+      .update({ status: newStatus })
+      .eq('id', user.id);
+
+    if (userError) {
+      console.warn("Updating status in users table with fallback:", userError.message);
+      await adminSupabase.from('users').upsert({ id: user.id, status: newStatus });
+    }
+
+    // 2. Sync active boolean to umkm table
+    const { error: umkmError } = await adminSupabase
+      .from('umkm')
+      .update({ active: isActive })
+      .eq('id', user.id);
+
+    if (umkmError) {
+      console.warn("Syncing umkm active status info:", umkmError.message);
+    }
   }
+
+  revalidatePath('/', 'layout');
+  return { success: true };
+}
+
+export async function toggleUmkmStatus(umkmId: string, isActive: boolean) {
+  const adminSupabase = getAdminClient();
+  const statusStr = isActive ? 'Aktif' : 'Nonaktif';
+
+  // 1. Update umkm table active boolean
+  await adminSupabase.from('umkm').update({ active: isActive }).eq('id', umkmId);
+
+  // 2. Sync to users table status string
+  await adminSupabase.from('users').update({ status: statusStr }).eq('id', umkmId);
+
+  revalidatePath('/', 'layout');
   return { success: true };
 }
 
