@@ -359,7 +359,16 @@ export async function updateUmkmProfile(umkmId: string, data: any) {
   const heroImage = data.hero_image !== undefined ? data.hero_image : undefined;
   delete data.logo_url;
 
-  const { error } = await adminSupabase.from('umkm').upsert({ id: umkmId, ...data });
+  let { error } = await adminSupabase.from('umkm').upsert({ id: umkmId, ...data });
+
+  // If Supabase table doesn't have sub_category column yet, fallback and retry without it so profile can still be saved
+  if (error && (error.message?.includes('sub_category') || error.code === 'PGRST204')) {
+    console.warn("Retrying updateUmkmProfile without sub_category (column not in Supabase schema yet)");
+    const { sub_category, ...fallbackData } = data;
+    const retryRes = await adminSupabase.from('umkm').upsert({ id: umkmId, ...fallbackData });
+    error = retryRes.error;
+  }
+
   if (error) {
     console.error("Error updating UMKM profile:", error);
     return { success: false, error: error.message };
